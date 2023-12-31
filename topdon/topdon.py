@@ -153,7 +153,7 @@ class ThermalCamera:
         cv2.resizeWindow('Thermal', self.newWidth, self.newHeight)        
 
     def rec(self):
-        now = time.strftime("%Y%m%d--%H%M%S")
+        now = time.strftime("%Y%m%d-%H%M%S")
         videoOut = cv2.VideoWriter(
             f'{self.videostore.camera["name"]}_{now}.avi', cv2.VideoWriter_fourcc(*'XVID'), 25, (self.newWidth, self.newHeight)
         )
