@@ -1,0 +1,3 @@
+numpy==1.26.1
+opencv_python==4.8.1.78
+pyudev==0.24.1
