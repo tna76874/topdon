@@ -16,6 +16,7 @@ import time
 import io
 import base64
 import os
+import subprocess
 import sys
 import socket
 
@@ -65,6 +66,7 @@ class ThermalCamera:
             url = f'http://{ip_adress}:{self.config["port"]}'
             url_qr = pyqrcode.create(url).terminal(module_color='white', background='black')
             print(f'############################\n\nOpen: {url}\n{url_qr}\n\n############################')
+            self.open_port()
             
     def get_ip_address(self):
         try:
@@ -417,11 +419,35 @@ class ThermalCamera:
             self.cap.release()
             
         if self.web == True:
-            try: 
+            try:
+                self.close_port()
                 if self.video_thread.is_alive():
                     self.video_thread.terminate()
                     self.video_thread.join()
             except: pass
+
+    def check_sudo(self):
+        try:
+            subprocess.run(['sudo', '-n', 'ls'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            return True
+        except subprocess.CalledProcessError:
+            return False
+    
+    def open_port(self):
+        if self.check_sudo():
+            try:
+                os.system(f'sudo ufw allow {self.config["port"]}')
+                print(f'Port {self.config["port"]} erfolgreich geöffnet.')
+            except Exception as e:
+                print(f'Fehler beim Öffnen des Ports {self.config["port"]}: {e}')
+    
+    def close_port(self):
+        if self.check_sudo():
+            try:
+                os.system(f'sudo ufw delete allow {self.config["port"]}')
+                print(f'Port {self.config["port"]} erfolgreich geschlossen.')
+            except Exception as e:
+                print(f'Fehler beim Schließen des Ports {self.config["port"]}: {e}')
                     
     def print_thermal_camera_info(self):
         info = """
