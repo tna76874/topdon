@@ -412,7 +412,7 @@ class ThermalCamera:
                     else:
                         self.elapsed = "00:00:00"
                           
-                if keyPress == ord('p'): #f to finish reording
+                if keyPress == ord('p'):
                     self.snapshot(heatmap)
                           
                 if keyPress == ord('q'):
@@ -464,15 +464,15 @@ LMH
 
 Key Bindings:
 
-a z: Increase/Decrease Blur
-s x: Floating High and Low Temp Label Threshold
-d c: Change Interpolated scale
-f v: Contrast
-w : Toggle Fullscreen / Windowed
-r t: Record and Stop
-p : Snapshot
-m : Cycle through ColorMaps
-h : Toggle HUD
+a z     : Increase/Decrease Blur
+s x     : Floating High and Low Temp Label Threshold
+d c     : Change Interpolated scale
+f v     : Contrast
+w       : Toggle Fullscreen / Windowed
+r       : Start and stop recording
+p       : Snapshot photo
+m       : Cycle through ColorMaps
+h       : Toggle HUD
 """
         print(info)
         
