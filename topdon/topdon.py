@@ -54,7 +54,10 @@ class ThermalCamera:
         self.colormap = next(self.colormap_options)
         
         self.font = cv2.FONT_HERSHEY_SIMPLEX
-        
+ 
+        self.rotation_options = cycle([None,cv2.ROTATE_90_CLOCKWISE,cv2.ROTATE_180,cv2.ROTATE_90_COUNTERCLOCKWISE])
+        self.rotation = next(self.rotation_options)       
+ 
         self.dispFullscreen_options = cycle([False,True])
         self.dispFullscreen = next(self.dispFullscreen_options)
         
@@ -157,11 +160,8 @@ class ThermalCamera:
         now = time.strftime("%Y%m%d-%H%M%S")
         self.snaptime = time.strftime("%H:%M:%S")
         cv2.imwrite("TC001" + now + ".png", heatmap)
-
     
-    def _process_frame(self, frame):
-        imdata, thdata = np.array_split(frame, 2)
-
+    def _process_frame(self, thdata):
         temperatures = ((thdata[..., 0] + thdata[..., 1] * 256) / 64 - 273.15).round(2)
         
         temp = temperatures[int(self.height/2)][int(self.width/2)]
@@ -174,7 +174,7 @@ class ThermalCamera:
         posmin = thdata[..., 1].argmin()
         lcol, lrow = divmod(posmin, self.width)
     
-        return temp, maxtemp, mintemp, avgtemp, imdata, thdata, mcol, mrow, lcol, lrow
+        return temp, maxtemp, mintemp, avgtemp, mcol, mrow, lcol, lrow
 
     def run(self):
         self.videostore.open()
@@ -184,8 +184,14 @@ class ThermalCamera:
         self.print_thermal_camera_info()
         while self.cap.isOpened():
             ret, frame = self.cap.read()
-            if ret == True:                         
-                temp, maxtemp, mintemp, avgtemp, imdata, thdata, mcol, mrow, lcol, lrow = self._process_frame(frame)
+            if ret == True:
+                imdata, thdata = np.array_split(frame, 2)
+                
+                if self.rotation!=None:
+                    imdata = cv2.rotate(imdata, self.rotation)
+                    thdata = cv2.rotate(thdata, self.rotation)
+                   
+                temp, maxtemp, mintemp, avgtemp, mcol, mrow, lcol, lrow = self._process_frame(thdata)
                           
                 # Convert the real image to RGB
                 bgr = cv2.cvtColor(imdata,  cv2.COLOR_YUV2BGR_YUYV)
@@ -195,7 +201,7 @@ class ThermalCamera:
                 bgr = cv2.resize(bgr,(self.newWidth,self.newHeight),interpolation=cv2.INTER_CUBIC)#Scale up!
                 if self.rad>0:
                     bgr = cv2.blur(bgr,(self.rad,self.rad))
-                          
+                                
                 #apply colormap
                 if self.colormap == 0:
                     heatmap = cv2.applyColorMap(bgr, cv2.COLORMAP_JET)
@@ -231,7 +237,7 @@ class ThermalCamera:
                     heatmap = cv2.applyColorMap(bgr, cv2.COLORMAP_RAINBOW)
                     heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
                     cmapText = 'Inv Rainbow'
-                          
+                
                           
                 if (self.hud=='all') or (self.hud=='cross'):
                     # draw crosshairs
@@ -302,9 +308,9 @@ class ThermalCamera:
                         cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0,0,0), 2, cv2.LINE_AA)
                         cv2.putText(heatmap,str(mintemp)+' C', ((lrow*self.scale)+10, (lcol*self.scale)+5),\
                         cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0, 255, 255), 1, cv2.LINE_AA)
-                          
+                
                 #display image
-                cv2.imshow('Thermal',heatmap)
+                cv2.imshow('Thermal', heatmap)
                 if self.web:
                     self.update_web_frame(heatmap)
                           
@@ -386,6 +392,13 @@ class ThermalCamera:
                           
                 if keyPress == ord('p'):
                     self.snapshot(heatmap)
+                    
+                if keyPress == ord('o'):
+                    self.rotation = next(self.rotation_options)
+                    self.width, self.height = self.height, self.width
+                    self.newWidth, self.newHeight= self.newHeight, self.newWidth
+                    cv2.destroyAllWindows()
+                    self.init_windows()
                           
                 if keyPress == ord('q'):
                     self.cap.release()
@@ -445,6 +458,7 @@ r       : Start and stop recording
 p       : Snapshot photo
 m       : Cycle through ColorMaps
 h       : Toggle HUD
+o       : Rotate image clockwise
 """
         print(info)
         
