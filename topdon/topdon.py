@@ -19,6 +19,7 @@ import os
 import subprocess
 import sys
 import socket
+from itertools import cycle
 
 from flask import Flask, render_template_string
 from flask_socketio import SocketIO
@@ -50,10 +51,14 @@ class ThermalCamera:
         self.alpha = 1.0  # Contrast control (1.0-3.0)
         self.colormap = 0
         self.font = cv2.FONT_HERSHEY_SIMPLEX
-        self.dispFullscreen = False
+        
+        self.dispFullscreen_options = cycle([False,True])
+        self.dispFullscreen = next(self.dispFullscreen_options)
+        
         self.rad = 0  # blur radius
         self.threshold = 2
-        self.hud = True
+        self.hud_options = cycle(['all','cross','none'])
+        self.hud = next(self.hud_options)
         self.recording = False
         self.elapsed = "00:00:00"
         self.snaptime = "None"
@@ -252,23 +257,24 @@ class ThermalCamera:
                           
                 #print(heatmap.shape)
                           
-                # draw crosshairs
-                cv2.line(heatmap,(int(self.newWidth/2),int(self.newHeight/2)+20),\
-                (int(self.newWidth/2),int(self.newHeight/2)-20),(255,255,255),2) #vline
-                cv2.line(heatmap,(int(self.newWidth/2)+20,int(self.newHeight/2)),\
-                (int(self.newWidth/2)-20,int(self.newHeight/2)),(255,255,255),2) #hline
+                if self.hud!='none':
+                    # draw crosshairs
+                    cv2.line(heatmap,(int(self.newWidth/2),int(self.newHeight/2)+20),\
+                    (int(self.newWidth/2),int(self.newHeight/2)-20),(255,255,255),2) #vline
+                    cv2.line(heatmap,(int(self.newWidth/2)+20,int(self.newHeight/2)),\
+                    (int(self.newWidth/2)-20,int(self.newHeight/2)),(255,255,255),2) #hline
+                              
+                    cv2.line(heatmap,(int(self.newWidth/2),int(self.newHeight/2)+20),\
+                    (int(self.newWidth/2),int(self.newHeight/2)-20),(0,0,0),1) #vline
+                    cv2.line(heatmap,(int(self.newWidth/2)+20,int(self.newHeight/2)),\
+                    (int(self.newWidth/2)-20,int(self.newHeight/2)),(0,0,0),1) #hline
+                    #show temp
+                    cv2.putText(heatmap,str(temp)+' C', (int(self.newWidth/2)+10, int(self.newHeight/2)-10),\
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0, 0, 0), 2, cv2.LINE_AA)
+                    cv2.putText(heatmap,str(temp)+' C', (int(self.newWidth/2)+10, int(self.newHeight/2)-10),\
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0, 255, 255), 1, cv2.LINE_AA)
                           
-                cv2.line(heatmap,(int(self.newWidth/2),int(self.newHeight/2)+20),\
-                (int(self.newWidth/2),int(self.newHeight/2)-20),(0,0,0),1) #vline
-                cv2.line(heatmap,(int(self.newWidth/2)+20,int(self.newHeight/2)),\
-                (int(self.newWidth/2)-20,int(self.newHeight/2)),(0,0,0),1) #hline
-                #show temp
-                cv2.putText(heatmap,str(temp)+' C', (int(self.newWidth/2)+10, int(self.newHeight/2)-10),\
-                cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0, 0, 0), 2, cv2.LINE_AA)
-                cv2.putText(heatmap,str(temp)+' C', (int(self.newWidth/2)+10, int(self.newHeight/2)-10),\
-                cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0, 255, 255), 1, cv2.LINE_AA)
-                          
-                if self.hud==True:
+                if self.hud=='all':
                     # display black box for our data
                     cv2.rectangle(heatmap, (0, 0),(160, 120), (0,0,0), -1)
                     # put text in the box
@@ -363,16 +369,17 @@ class ThermalCamera:
                     if self.dispFullscreen == False:
                     	cv2.resizeWindow('Thermal', self.newWidth,self.newHeight)
                           
-                if keyPress == ord('q'): #enable fullscreen
-                    self.dispFullscreen = True
-                    cv2.namedWindow('Thermal',cv2.WND_PROP_FULLSCREEN)
-                    cv2.setWindowProperty('Thermal',cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
-                if keyPress == ord('w'): #disable fullscreen
-                    self.dispFullscreen = False
-                    cv2.namedWindow('Thermal',cv2.WINDOW_GUI_NORMAL)
-                    cv2.setWindowProperty('Thermal',cv2.WND_PROP_AUTOSIZE,cv2.WINDOW_GUI_NORMAL)
-                    cv2.resizeWindow('Thermal', self.newWidth,self.newHeight)
-                          
+                if keyPress == ord('w'): #toggle fullscreen
+                    self.dispFullscreen = next(self.dispFullscreen_options)
+
+                    if self.dispFullscreen==True:
+                        cv2.namedWindow('Thermal',cv2.WND_PROP_FULLSCREEN)
+                        cv2.setWindowProperty('Thermal',cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
+                    elif self.dispFullscreen==False:
+                        cv2.namedWindow('Thermal',cv2.WINDOW_GUI_NORMAL)
+                        cv2.setWindowProperty('Thermal',cv2.WND_PROP_AUTOSIZE,cv2.WINDOW_GUI_NORMAL)
+                        cv2.resizeWindow('Thermal', self.newWidth,self.newHeight)                                   
+
                 if keyPress == ord('f'): #contrast+
                     self.alpha += 0.1
                     self.alpha = round(self.alpha,1)#fix round error
@@ -386,10 +393,7 @@ class ThermalCamera:
                           
                           
                 if keyPress == ord('h'):
-                    if self.hud==True:
-                    	self.hud=False
-                    elif self.hud==False:
-                    	self.hud=True
+                    self.hud = next(self.hud_options)
                           
                 if keyPress == ord('m'): #m to cycle through color maps
                     self.colormap += 1
@@ -460,7 +464,7 @@ a z: Increase/Decrease Blur
 s x: Floating High and Low Temp Label Threshold
 d c: Change Interpolated scale
 f v: Contrast
-q w: Fullscreen Windowed
+w : Toggle Fullscreen / Windowed
 r t: Record and Stop
 p : Snapshot
 m : Cycle through ColorMaps
@@ -482,5 +486,5 @@ def main():
     self.run()
 
 if __name__ == "__main__":
-    self = ThermalCamera(web=True)
+    self = ThermalCamera()
     self.run()
