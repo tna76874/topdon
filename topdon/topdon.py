@@ -23,6 +23,9 @@ from flask import Flask, render_template_string
 from flask_socketio import SocketIO
 from threading import Thread
 
+import pyqrcode
+
+
 try:
     from topdon.video import *
 except:
@@ -59,7 +62,9 @@ class ThermalCamera:
             self.video_thread = Thread(target=lambda: self.app.run(debug=False, port=self.config['port'], threaded=True, host='0.0.0.0'))
             self.video_thread.start()
             ip_adress = self.get_ip_address()
-            print(f'############################\n\nOpen: http://{ip_adress}:{self.config["port"]}\n\n############################')
+            url = f'http://{ip_adress}:{self.config["port"]}'
+            url_qr = pyqrcode.create(url).terminal(module_color='white', background='black')
+            print(f'############################\n\nOpen: {url}\n{url_qr}\n\n############################')
             
     def get_ip_address(self):
         try:

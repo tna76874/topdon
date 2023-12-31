@@ -20,6 +20,7 @@ setup(
         "pyudev",
 	"Flask",
 	"flask_socketio",
+	"pyqrcode",
     ],
     package_data={
         'topdon': ['video.py'],
