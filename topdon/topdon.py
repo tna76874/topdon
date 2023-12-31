@@ -50,7 +50,7 @@ class ThermalCamera:
         self.newHeight = self.height * self.scale
         self.alpha = 1.0  # Contrast control (1.0-3.0)
         
-        self.colormap_options(list(range(11)))
+        self.colormap_options = cycle(list(range(11)))
         self.colormap = next(self.colormap_options)
         
         self.font = cv2.FONT_HERSHEY_SIMPLEX
