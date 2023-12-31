@@ -60,7 +60,7 @@ class ThermalCamera:
         
         self.rad = 0  # blur radius
         self.threshold = 2
-        self.hud_options = cycle(['all','cross','none'])
+        self.hud_options = cycle(['all','cross','spots','none'])
         self.hud = next(self.hud_options)
         
         self.recording_options = cycle([False,True])
@@ -263,7 +263,7 @@ class ThermalCamera:
                           
                 #print(heatmap.shape)
                           
-                if self.hud!='none':
+                if (self.hud=='all') or (self.hud=='cross'):
                     # draw crosshairs
                     cv2.line(heatmap,(int(self.newWidth/2),int(self.newHeight/2)+20),\
                     (int(self.newWidth/2),int(self.newHeight/2)-20),(255,255,255),2) #vline
@@ -313,24 +313,25 @@ class ThermalCamera:
                     	cv2.putText(heatmap,'Recording: '+self.elapsed, (10, 112),\
                     	cv2.FONT_HERSHEY_SIMPLEX, 0.4,(40, 40, 255), 1, cv2.LINE_AA)
                 
-                #Yeah, this looks like we can probably do this next bit more efficiently!
-                #display floating max temp
-                if maxtemp > avgtemp+self.threshold:
-                    cv2.circle(heatmap, (mrow*self.scale, mcol*self.scale), 5, (0,0,0), 2)
-                    cv2.circle(heatmap, (mrow*self.scale, mcol*self.scale), 5, (0,0,255), -1)
-                    cv2.putText(heatmap,str(maxtemp)+' C', ((mrow*self.scale)+10, (mcol*self.scale)+5),\
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0,0,0), 2, cv2.LINE_AA)
-                    cv2.putText(heatmap,str(maxtemp)+' C', ((mrow*self.scale)+10, (mcol*self.scale)+5),\
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0, 255, 255), 1, cv2.LINE_AA)
-                          
-                #display floating min temp
-                if mintemp < avgtemp-self.threshold:
-                    cv2.circle(heatmap, (lrow*self.scale, lcol*self.scale), 5, (0,0,0), 2)
-                    cv2.circle(heatmap, (lrow*self.scale, lcol*self.scale), 5, (255,0,0), -1)
-                    cv2.putText(heatmap,str(mintemp)+' C', ((lrow*self.scale)+10, (lcol*self.scale)+5),\
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0,0,0), 2, cv2.LINE_AA)
-                    cv2.putText(heatmap,str(mintemp)+' C', ((lrow*self.scale)+10, (lcol*self.scale)+5),\
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0, 255, 255), 1, cv2.LINE_AA)
+                if (self.hud!='none'):
+                    #Yeah, this looks like we can probably do this next bit more efficiently!
+                    #display floating max temp
+                    if maxtemp > avgtemp+self.threshold:
+                        cv2.circle(heatmap, (mrow*self.scale, mcol*self.scale), 5, (0,0,0), 2)
+                        cv2.circle(heatmap, (mrow*self.scale, mcol*self.scale), 5, (0,0,255), -1)
+                        cv2.putText(heatmap,str(maxtemp)+' C', ((mrow*self.scale)+10, (mcol*self.scale)+5),\
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0,0,0), 2, cv2.LINE_AA)
+                        cv2.putText(heatmap,str(maxtemp)+' C', ((mrow*self.scale)+10, (mcol*self.scale)+5),\
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0, 255, 255), 1, cv2.LINE_AA)
+                              
+                    #display floating min temp
+                    if mintemp < avgtemp-self.threshold:
+                        cv2.circle(heatmap, (lrow*self.scale, lcol*self.scale), 5, (0,0,0), 2)
+                        cv2.circle(heatmap, (lrow*self.scale, lcol*self.scale), 5, (255,0,0), -1)
+                        cv2.putText(heatmap,str(mintemp)+' C', ((lrow*self.scale)+10, (lcol*self.scale)+5),\
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0,0,0), 2, cv2.LINE_AA)
+                        cv2.putText(heatmap,str(mintemp)+' C', ((lrow*self.scale)+10, (lcol*self.scale)+5),\
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0, 255, 255), 1, cv2.LINE_AA)
                           
                 #display image
                 cv2.imshow('Thermal',heatmap)
