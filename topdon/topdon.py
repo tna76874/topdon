@@ -59,7 +59,10 @@ class ThermalCamera:
         self.threshold = 2
         self.hud_options = cycle(['all','cross','none'])
         self.hud = next(self.hud_options)
-        self.recording = False
+        
+        self.recording_options = cycle([False,True])
+        self.recording = next(self.recording_options)
+        
         self.elapsed = "00:00:00"
         self.snaptime = "None"
         
@@ -400,13 +403,14 @@ class ThermalCamera:
                     if self.colormap == 11:
                     	self.colormap = 0
                           
-                if keyPress == ord('r') and self.recording == False: #r to start reording
-                    videoOut = self.rec()
-                    self.recording = True
-                    start = time.time()
-                if keyPress == ord('t'): #f to finish reording
-                    self.recording = False
-                    self.elapsed = "00:00:00"
+                if keyPress == ord('r'):
+                    self.recording = next(self.recording_options)
+
+                    if self.recording == True:
+                        videoOut = self.rec()
+                        start = time.time()
+                    else:
+                        self.elapsed = "00:00:00"
                           
                 if keyPress == ord('p'): #f to finish reording
                     self.snapshot(heatmap)
