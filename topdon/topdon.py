@@ -61,6 +61,9 @@ class ThermalCamera:
         self.dispFullscreen_options = cycle([False,True])
         self.dispFullscreen = next(self.dispFullscreen_options)
         
+        self.flip_options = cycle([False,True])
+        self.flip = next(self.flip_options)
+        
         self.rad = 0  # blur radius
         self.threshold = 2
         self.hud_options = cycle(['all','cross','spots','none'])
@@ -190,6 +193,11 @@ class ThermalCamera:
                 if self.rotation!=None:
                     imdata = cv2.rotate(imdata, self.rotation)
                     thdata = cv2.rotate(thdata, self.rotation)
+                    
+                if self.flip:
+                    imdata = cv2.flip(imdata, 1)
+                    thdata = cv2.flip(thdata, 1)
+
                    
                 temp, maxtemp, mintemp, avgtemp, mcol, mrow, lcol, lrow = self._process_frame(thdata)
                           
@@ -399,6 +407,9 @@ class ThermalCamera:
                     self.newWidth, self.newHeight= self.newHeight, self.newWidth
                     cv2.destroyAllWindows()
                     self.init_windows()
+                    
+                if keyPress == ord('t'):    
+                    self.flip = next(self.flip_options)
                           
                 if keyPress == ord('q'):
                     self.cap.release()
@@ -459,6 +470,7 @@ p       : Snapshot photo
 m       : Cycle through ColorMaps
 h       : Toggle HUD
 o       : Rotate image clockwise
+t       : Flip image
 """
         print(info)
         
