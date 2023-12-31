@@ -158,48 +158,74 @@ class ThermalCamera:
         self.snaptime = time.strftime("%H:%M:%S")
         cv2.imwrite("TC001" + now + ".png", heatmap)
 
+
     def _compute_temperature(self, data):
-        hi = data[96][128][0]
-        lo = data[96][128][1]
-        lo = lo * 256
-        rawtemp = hi + lo
-        temp = (rawtemp / 64) - 273.15
-        return round(temp, 2)
-
-    def _process_frame(self, frame):
-        # now parse the data from the bottom frame and convert to temp!
-        # https://www.eevblog.com/forum/thermal-imaging/infiray-and-their-p2-pro-discussion/200/
-        # Huge props to LeoDJ for figuring out how the data is stored and how to compute temp from it.
-        imdata, thdata = np.array_split(frame, 2)
-
-        temp = self._compute_temperature(thdata)
-
-        # Find the max temperature in the frame
-        lomax = thdata[..., 1].max()
+        hi, lo = data[96][128][:2]
+        rawtemp = hi + lo * 256
+        return round((rawtemp / 64) - 273.15, 2)
+    
+    def _compute_temp_from_data(self, thdata):
+        maxtemp = round((thdata[..., 0] + thdata[..., 1] * 256).max() / 64 - 273.15, 2)
+        mintemp = round((thdata[..., 0] + thdata[..., 1] * 256).min() / 64 - 273.15, 2)
+        avgtemp = round((thdata[..., 0] + thdata[..., 1] * 256).mean() / 64 - 273.15, 2)
+    
         posmax = thdata[..., 1].argmax()
         mcol, mrow = divmod(posmax, self.width)
-        himax = thdata[mcol][mrow][0]
-        lomax = lomax * 256
-        maxtemp = (himax + lomax) / 64 - 273.15
-        maxtemp = round(maxtemp, 2)
-
-        # Find the lowest temperature in the frame
-        lomin = thdata[..., 1].min()
+    
         posmin = thdata[..., 1].argmin()
         lcol, lrow = divmod(posmin, self.width)
-        himin = thdata[lcol][lrow][0]
-        lomin = lomin * 256
-        mintemp = (himin + lomin) / 64 - 273.15
-        mintemp = round(mintemp, 2)
-
-        # Find the average temperature in the frame
-        loavg = thdata[..., 1].mean()
-        hiavg = thdata[..., 0].mean()
-        loavg = loavg * 256
-        avgtemp = (hiavg + loavg) / 64 - 273.15
-        avgtemp = round(avgtemp, 2)
-
+    
+        return maxtemp, mintemp, avgtemp, mcol, mrow, lcol, lrow
+    
+    def _process_frame(self, frame):
+        imdata, thdata = np.array_split(frame, 2)
+        temp = self._compute_temperature(thdata)
+        
+        maxtemp, mintemp, avgtemp, mcol, mrow, lcol, lrow = self._compute_temp_from_data(thdata)
         return temp, maxtemp, mintemp, avgtemp, imdata, thdata, mcol, mrow, lcol, lrow
+
+    # def _compute_temperature(self, data):
+    #     hi = data[96][128][0]
+    #     lo = data[96][128][1]
+    #     lo = lo * 256
+    #     rawtemp = hi + lo
+    #     temp = (rawtemp / 64) - 273.15
+    #     return round(temp, 2)
+
+    # def _process_frame(self, frame):
+    #     # now parse the data from the bottom frame and convert to temp!
+    #     # https://www.eevblog.com/forum/thermal-imaging/infiray-and-their-p2-pro-discussion/200/
+    #     # Huge props to LeoDJ for figuring out how the data is stored and how to compute temp from it.
+    #     imdata, thdata = np.array_split(frame, 2)
+
+    #     temp = self._compute_temperature(thdata)
+
+    #     # Find the max temperature in the frame
+    #     lomax = thdata[..., 1].max()
+    #     posmax = thdata[..., 1].argmax()
+    #     mcol, mrow = divmod(posmax, self.width)
+    #     himax = thdata[mcol][mrow][0]
+    #     lomax = lomax * 256
+    #     maxtemp = (himax + lomax) / 64 - 273.15
+    #     maxtemp = round(maxtemp, 2)
+
+    #     # Find the lowest temperature in the frame
+    #     lomin = thdata[..., 1].min()
+    #     posmin = thdata[..., 1].argmin()
+    #     lcol, lrow = divmod(posmin, self.width)
+    #     himin = thdata[lcol][lrow][0]
+    #     lomin = lomin * 256
+    #     mintemp = (himin + lomin) / 64 - 273.15thdata[..., 1]).max()
+    #     mintemp = round(mintemp, 2)
+
+    #     # Find the average temperature in the frame
+    #     loavg = thdata[..., 1].mean()
+    #     hiavg = thdata[..., 0].mean()
+    #     loavg = loavg * 256
+    #     avgtemp = (hiavg + loavg) / 64 - 273.15
+    #     avgtemp = round(avgtemp, 2)
+
+    #     return temp, maxtemp, mintemp, avgtemp, imdata, thdata, mcol, mrow, lcol, lrow
 
     def run(self):
         self.videostore.open()
