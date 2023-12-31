@@ -155,14 +155,14 @@ class ThermalCamera:
     def rec(self):
         now = time.strftime("%Y%m%d--%H%M%S")
         videoOut = cv2.VideoWriter(
-            now + 'output.avi', cv2.VideoWriter_fourcc(*'XVID'), 25, (self.newWidth, self.newHeight)
+            f'{self.videostore.camera["name"]}_{now}.avi', cv2.VideoWriter_fourcc(*'XVID'), 25, (self.newWidth, self.newHeight)
         )
         return videoOut
 
     def snapshot(self, heatmap):
         now = time.strftime("%Y%m%d-%H%M%S")
         self.snaptime = time.strftime("%H:%M:%S")
-        cv2.imwrite("TC001" + now + ".png", heatmap)
+        cv2.imwrite(f'{self.videostore.camera["name"]}_{now}.png',, heatmap)
     
     def _process_frame(self, thdata):
         temperatures = ((thdata[..., 0] + thdata[..., 1] * 256) / 64 - 273.15).round(2)
