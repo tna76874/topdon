@@ -17,6 +17,7 @@ import io
 import base64
 import os
 import sys
+import socket
 
 from flask import Flask, render_template_string
 from flask_socketio import SocketIO
@@ -56,7 +57,19 @@ class ThermalCamera:
         if self.web == True:
             self.init_webapp()
             self.video_thread = Thread(target=lambda: self.app.run(debug=False, port=self.config['port'], threaded=True, host='0.0.0.0'))
-            self.video_thread.start()  
+            self.video_thread.start()
+            ip_adress = self.get_ip_address()
+            print(f'############################\n\nOpen: http://{ip_adress}:{self.config["port"]}\n\n############################')
+            
+    def get_ip_address(self):
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            ip_address = s.getsockname()[0]
+            s.close()
+            return ip_address
+        except:
+            return '127.0.0.1'
             
     def init_webapp(self):
         app = Flask('Video Stream')
