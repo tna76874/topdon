@@ -49,7 +49,10 @@ class ThermalCamera:
         self.newWidth = self.width * self.scale
         self.newHeight = self.height * self.scale
         self.alpha = 1.0  # Contrast control (1.0-3.0)
-        self.colormap = 0
+        
+        self.colormap_options(list(range(11)))
+        self.colormap = next(self.colormap_options)
+        
         self.font = cv2.FONT_HERSHEY_SIMPLEX
         
         self.dispFullscreen_options = cycle([False,True])
@@ -395,13 +398,11 @@ class ThermalCamera:
                     	self.alpha = 0.0
                           
                           
-                if keyPress == ord('h'):
+                if keyPress == ord('h'): # cycle through hud options
                     self.hud = next(self.hud_options)
                           
                 if keyPress == ord('m'): #m to cycle through color maps
-                    self.colormap += 1
-                    if self.colormap == 11:
-                    	self.colormap = 0
+                    self.colormap = next(self.colormap_options)
                           
                 if keyPress == ord('r'):
                     self.recording = next(self.recording_options)
