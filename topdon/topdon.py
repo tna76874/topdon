@@ -14,15 +14,29 @@ import numpy as np
 import argparse
 import time
 import io
+import base64
+import os
+import sys
+
+from flask import Flask, render_template_string
+from flask_socketio import SocketIO
+from threading import Thread
 
 try:
     from topdon.video import *
 except:
     from video import *
-
+    
+    
 class ThermalCamera:
-    def __init__(self):
+    def __init__(self, **kwargs):
+        self.config =       {
+                            'web': False,
+                            'port' : 5001,
+                            }
+        self.config.update(kwargs)
         self.videostore = Video()
+        self.web = self.config['web']
         self.width = 256  # Sensor width
         self.height = 192  # sensor height
         self.scale = 3  # scale multiplier
@@ -38,6 +52,64 @@ class ThermalCamera:
         self.recording = False
         self.elapsed = "00:00:00"
         self.snaptime = "None"
+        
+        if self.web == True:
+            self.init_webapp()
+            self.video_thread = Thread(target=lambda: self.app.run(debug=False, port=self.config['port'], threaded=True, host='0.0.0.0'))
+            self.video_thread.start()  
+            
+    def init_webapp(self):
+        app = Flask('Video Stream')
+        app.current_frame = None
+        app.index_string = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Stream</title>
+</head>
+<style>
+    body, html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    #videoFrame {
+        object-fit: contain;
+        width: 100%;
+        height: 100vh;
+    }
+</style>
+<body>
+    <img id="videoFrame">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+        socket.on('update_frame', function(data) {
+            document.getElementById('videoFrame').src = 'data:image/jpeg;base64,' + data.current_frame;
+        });
+    </script>
+</body>
+</html>
+        """  
+        
+        @app.route('/')
+        def index():
+            return render_template_string(app.index_string, current_frame=app.current_frame)
+        
+        self.app = app
+        self.socket = SocketIO(self.app)
+        
+    def update_web_frame(self,frame):
+        _, buffer = cv2.imencode('.jpg', frame)
+        self.app.current_frame = base64.b64encode(buffer).decode('utf-8')
+        self.socket.emit('update_frame', {'current_frame': self.app.current_frame})
         
     def init_windows(self):
         cv2.namedWindow('Thermal', cv2.WINDOW_GUI_NORMAL)
@@ -230,6 +302,8 @@ class ThermalCamera:
                           
                 #display image
                 cv2.imshow('Thermal',heatmap)
+                if self.web:
+                    self.update_web_frame(heatmap)
                           
                 if self.recording == True:
                     self.elapsed = (time.time() - start)
@@ -316,12 +390,20 @@ class ThermalCamera:
                 if keyPress == ord('q'):
                     self.cap.release()
                     cv2.destroyAllWindows()
+                    self.__del__()
                     break
 
                     
     def __del__(self):
         if hasattr(self, 'cap') and self.cap.isOpened():
             self.cap.release()
+            
+        if self.web == True:
+            try: 
+                if self.video_thread.is_alive():
+                    self.video_thread.terminate()
+                    self.video_thread.join()
+            except: pass
                     
     def print_thermal_camera_info(self):
         info = """
@@ -343,9 +425,18 @@ h : Toggle HUD
         print(info)
         
 def main():
-    self = ThermalCamera()
-    self.run()   
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='Thermal Camera')
+    
+    parser.add_argument('--web', action='store_true', help='Starte die ThermalCamera mit Webunterstützung')
+    parser.add_argument('--port', type=int, default=5001, help='Der Port für die Webunterstützung (Standard: 5001)')
+
+    args = parser.parse_args()
+        
+    self = ThermalCamera(**vars(args))
+    self.run()
 
 if __name__ == "__main__":
-    self = ThermalCamera()
-    # self.run()
+    self = ThermalCamera(web=True)
+    self.run()

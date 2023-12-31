@@ -18,6 +18,8 @@ setup(
         "argparse",
         "opencv_python",
         "pyudev",
+	"Flask",
+	"flask_socketio",
     ],
     package_data={
         'topdon': ['video.py'],
