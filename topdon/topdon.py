@@ -11,6 +11,7 @@ https://github.com/leswright1977/PyThermalCamera
 '''
 import cv2
 import numpy as np
+import csv
 import argparse
 import time
 import io
@@ -32,7 +33,45 @@ try:
     from topdon.video import *
 except:
     from video import *
-    
+
+class VideoRecorder:
+    def __init__(self, camera, width, height):
+        self.camera = camera.copy()
+        self.width = width
+        self.height = height
+        self.now = time.strftime("%Y%m%d-%H%M%S")
+        self.data = list()
+
+        self.video_out = self._initialize_video_out()
+
+    def _initialize_video_out(self):
+        file_name = f'{self.camera["name"]}_{self.now}.avi'
+        video_out = cv2.VideoWriter(file_name, cv2.VideoWriter_fourcc(*'XVID'), 25, (self.width, self.height))
+        return video_out
+
+    def add_frame(self, frame, data=None):
+        self.video_out.write(frame)
+        if data!=None:
+            self.data.append(data)
+        
+    def save_to_csv(self):
+        csv_file = f'{self.camera["name"]}_{self.now}.csv'
+
+        with open(csv_file, 'a', newline='') as file:
+            writer = csv.DictWriter(file, fieldnames=self.data[0].keys())
+
+            if file.tell() == 0:
+                writer.writeheader()
+
+            writer.writerows(self.data)
+
+    def release(self):
+        self.video_out.release()
+
+    def __del__(self):
+        self.release()
+        if len(self.data)!=0:
+            self.save_to_csv()
     
 class ThermalCamera:
     def __init__(self, **kwargs):
@@ -200,6 +239,17 @@ class ThermalCamera:
 
                    
                 temp, maxtemp, mintemp, avgtemp, mcol, mrow, lcol, lrow = self._process_frame(thdata)
+                
+                img_data = {
+                                'max_temperature': maxtemp,
+                                'min_temperature': mintemp,
+                                'target_temp'    : temp,
+                                'avg_temperature': avgtemp,
+                                'max_position_col': mcol,
+                                'max_position_row': mrow,
+                                'min_position_col': lcol,
+                                'min_position_row': lrow,
+                            }
                           
                 # Convert the real image to RGB
                 bgr = cv2.cvtColor(imdata,  cv2.COLOR_YUV2BGR_YUYV)
@@ -325,8 +375,7 @@ class ThermalCamera:
                 if self.recording == True:
                     self.elapsed = (time.time() - start)
                     self.elapsed = time.strftime("%H:%M:%S", time.gmtime(self.elapsed)) 
-                    #print(elapsed)
-                    videoOut.write(heatmap)
+                    videoOut.add_frame(heatmap, data = img_data)
                 
                 keyPress = cv2.waitKey(1)
                 if keyPress == ord('a'): #Increase blur radius
@@ -393,10 +442,11 @@ class ThermalCamera:
                     self.recording = next(self.recording_options)
 
                     if self.recording == True:
-                        videoOut = self.rec()
+                        videoOut = VideoRecorder(self.videostore.camera, self.newWidth, self.newHeight)
                         start = time.time()
                     else:
                         self.elapsed = "00:00:00"
+                        del videoOut
                           
                 if keyPress == ord('p'):
                     self.snapshot(heatmap)
