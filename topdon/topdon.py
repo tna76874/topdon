@@ -84,9 +84,17 @@ class ThermalCamera:
         self.web = self.config['web']
         self.width = 256  # Sensor width
         self.height = 192  # sensor height
+        
+        self.target_w = int(self.width/2)
+        self.target_h = int(self.height/2)
+        self.target = None
+        
+        self.targetstep = 1        
+        
         self.scale = 3  # scale multiplier
         self.newWidth = self.width * self.scale
         self.newHeight = self.height * self.scale
+        self.set_target_pos()
         self.alpha = 1.0  # Contrast control (1.0-3.0)
         
         self.colormap_options = cycle(list(range(11)))
@@ -114,6 +122,7 @@ class ThermalCamera:
         self.elapsed = "00:00:00"
         self.snaptime = "None"
         
+        
         if self.web == True:
             self.init_webapp()
             self.video_thread = Thread(target=lambda: self.app.run(debug=False, port=self.config['port'], threaded=True, host='0.0.0.0'))
@@ -123,6 +132,10 @@ class ThermalCamera:
             url_qr = pyqrcode.create(url).terminal(module_color='white', background='black')
             print(f'############################\n\nOpen: {url}\n{url_qr}\n\n############################')
             self.open_port()
+            
+    def set_target_pos(self):
+        self.target = (int(self.newWidth * self.target_w / self.width), int(self.newHeight* self.target_h / self.height))
+
             
     def get_ip_address(self):
         try:
@@ -206,7 +219,7 @@ class ThermalCamera:
     def _process_frame(self, thdata):
         temperatures = ((thdata[..., 0] + thdata[..., 1] * 256) / 64 - 273.15).round(2)
         
-        temp = temperatures[int(self.height/2)][int(self.width/2)]
+        temp = temperatures[int(self.target_h)][int(self.target_w)]
     
         maxtemp, mintemp, avgtemp = [np.round(k,2) for k in [temperatures.max(), temperatures.min(), temperatures.mean()]]
         
@@ -241,14 +254,16 @@ class ThermalCamera:
                 temp, maxtemp, mintemp, avgtemp, mcol, mrow, lcol, lrow = self._process_frame(thdata)
                 
                 img_data = {
+                                'avg_temperature': avgtemp,
                                 'max_temperature': maxtemp,
                                 'min_temperature': mintemp,
                                 'target_temp'    : temp,
-                                'avg_temperature': avgtemp,
                                 'max_position_col': mcol,
                                 'max_position_row': mrow,
                                 'min_position_col': lcol,
                                 'min_position_row': lrow,
+                                'target_position_col': self.target_h,
+                                'target_position_row': self.target_w,
                             }
                           
                 # Convert the real image to RGB
@@ -299,20 +314,20 @@ class ThermalCamera:
                           
                 if (self.hud=='all') or (self.hud=='cross'):
                     # draw crosshairs
-                    cv2.line(heatmap,(int(self.newWidth/2),int(self.newHeight/2)+20),\
-                    (int(self.newWidth/2),int(self.newHeight/2)-20),(255,255,255),2) #vline
-                    cv2.line(heatmap,(int(self.newWidth/2)+20,int(self.newHeight/2)),\
-                    (int(self.newWidth/2)-20,int(self.newHeight/2)),(255,255,255),2) #hline
-                              
-                    cv2.line(heatmap,(int(self.newWidth/2),int(self.newHeight/2)+20),\
-                    (int(self.newWidth/2),int(self.newHeight/2)-20),(0,0,0),1) #vline
-                    cv2.line(heatmap,(int(self.newWidth/2)+20,int(self.newHeight/2)),\
-                    (int(self.newWidth/2)-20,int(self.newHeight/2)),(0,0,0),1) #hline
-                    #show temp
-                    cv2.putText(heatmap,str(temp)+' C', (int(self.newWidth/2)+10, int(self.newHeight/2)-10),\
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0, 0, 0), 2, cv2.LINE_AA)
-                    cv2.putText(heatmap,str(temp)+' C', (int(self.newWidth/2)+10, int(self.newHeight/2)-10),\
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0, 255, 255), 1, cv2.LINE_AA)
+                    center = self.target
+                    
+                    # Weiß gestrichelte Linien
+                    cv2.line(heatmap, (center[0], center[1] + 20), (center[0], center[1] - 20), (255, 255, 255), 2)  # vline
+                    cv2.line(heatmap, (center[0] + 20, center[1]), (center[0] - 20, center[1]), (255, 255, 255), 2)  # hline
+                    
+                    # Schwarze gestrichelte Linien
+                    cv2.line(heatmap, (center[0], center[1] + 20), (center[0], center[1] - 20), (0, 0, 0), 1)  # vline
+                    cv2.line(heatmap, (center[0] + 20, center[1]), (center[0] - 20, center[1]), (0, 0, 0), 1)  # hline
+                    
+                    # Temperatur anzeigen
+                    cv2.putText(heatmap, str(temp) + ' C', (center[0] + 10, center[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 2, cv2.LINE_AA)
+                    cv2.putText(heatmap, str(temp) + ' C', (center[0] + 10, center[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 255), 1, cv2.LINE_AA)
+
                           
                 if self.hud=='all':
                     # display black box for our data
@@ -398,14 +413,17 @@ class ThermalCamera:
                     	self.scale = 5
                     self.newWidth = self.width*self.scale
                     self.newHeight = self.height*self.scale
+                    self.set_target_pos()
                     if self.dispFullscreen == False:
                     	cv2.resizeWindow('Thermal', self.newWidth,self.newHeight)
+                        
                 if keyPress == ord('c'): #Decrease scale
                     self.scale -= 1
                     if self.scale <= 1:
                     	self.scale = 1
                     self.newWidth = self.width*self.scale
                     self.newHeight = self.height*self.scale
+                    self.set_target_pos()
                     if self.dispFullscreen == False:
                     	cv2.resizeWindow('Thermal', self.newWidth,self.newHeight)
                           
@@ -448,18 +466,37 @@ class ThermalCamera:
                         self.elapsed = "00:00:00"
                         del videoOut
                           
-                if keyPress == ord('p'):
+                if keyPress == ord('i'):
                     self.snapshot(heatmap)
                     
                 if keyPress == ord('o'):
                     self.rotation = next(self.rotation_options)
                     self.width, self.height = self.height, self.width
                     self.newWidth, self.newHeight= self.newHeight, self.newWidth
+                    self.target_w, self.target_h = self.target_h, self.target_w 
+                    self.set_target_pos()
                     cv2.destroyAllWindows()
                     self.init_windows()
                     
                 if keyPress == ord('t'):    
                     self.flip = next(self.flip_options)
+                    
+                if keyPress == ord('p'):  # oben
+                    if self.target_h - self.targetstep >= 0:
+                        self.target_h -= self.targetstep
+                        self.set_target_pos()
+                if keyPress == 214:  # unten
+                    if self.target_h + self.targetstep <= self.height:
+                        self.target_h += self.targetstep
+                        self.set_target_pos()
+                if keyPress == ord('l'):  # links
+                    if self.target_w - self.targetstep >= 0:
+                        self.target_w -= self.targetstep
+                        self.set_target_pos()
+                if keyPress == 196:  # rechts
+                    if self.target_w + self.targetstep <= self.width:
+                        self.target_w += self.targetstep
+                        self.set_target_pos()
                           
                 if keyPress == ord('q'):
                     self.cap.release()
@@ -516,11 +553,12 @@ d c     : Change Interpolated scale
 f v     : Contrast
 w       : Toggle Fullscreen / Windowed
 r       : Start and stop recording
-p       : Snapshot photo
+i       : Snapshot photo
 m       : Cycle through ColorMaps
 h       : Toggle HUD
 o       : Rotate image clockwise
 t       : Flip image
+p/ö/l/ä : Move target position up/down/left/right
 """
         print(info)
         
