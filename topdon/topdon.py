@@ -33,6 +33,11 @@ try:
     from topdon.video import *
 except:
     from video import *
+    
+    
+current_dir = os.path.dirname(os.path.abspath(__file__))
+template_folder = os.path.join(current_dir, 'templates')
+static_folder = os.path.join(current_dir, 'static')
 
 class VideoRecorder:
     def __init__(self, camera, width, height):
@@ -148,11 +153,12 @@ class ThermalCamera:
             return '127.0.0.1'
             
     def init_webapp(self):
-        app = Flask('Video Stream')
+        app = Flask('Video Stream', template_folder=template_folder, static_folder=static_folder)
         app.current_frame = None
-        app.index_string = """
-
-        """  
+    
+        @app.route('/scripts/<script_name>')
+        def serve_script(script_name):
+            return app.send_static_file(f'scripts/{script_name}')
         
         @app.route('/')
         def index():
