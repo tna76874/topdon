@@ -6,9 +6,17 @@ Python Software to use the Topdon TC001 Thermal Camera on Linux. Source Code ada
 
 
 
-### Installation
+#### Installation
 
 ```bash
 pip3 install --upgrade git+https://github.com/tna76874/topdon.git
+```
+
+#### Anaconda
+
+```bash
+git clone https://github.com/tna76874/topdon.git
+cd topdon
+conda env create -f environment.yml
 ```
 
