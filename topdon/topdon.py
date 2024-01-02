@@ -22,7 +22,7 @@ import sys
 import socket
 from itertools import cycle
 
-from flask import Flask, render_template_string
+from flask import Flask, render_template
 from flask_socketio import SocketIO
 from threading import Thread
 
@@ -151,46 +151,12 @@ class ThermalCamera:
         app = Flask('Video Stream')
         app.current_frame = None
         app.index_string = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Stream</title>
-</head>
-<style>
-    body, html {
-        margin: 0;
-        padding: 0;
-        height: 100%;
-        overflow: hidden;
-    }
 
-    #videoFrame {
-        object-fit: contain;
-        width: 100%;
-        height: 100vh;
-    }
-</style>
-<body>
-    <img id="videoFrame">
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    <script>
-        var socket = io.connect('http://' + document.domain + ':' + location.port);
-
-        socket.on('update_frame', function(data) {
-            document.getElementById('videoFrame').src = 'data:image/jpeg;base64,' + data.current_frame;
-        });
-    </script>
-</body>
-</html>
         """  
         
         @app.route('/')
         def index():
-            return render_template_string(app.index_string, current_frame=app.current_frame)
+            return render_template('index.html', current_frame=app.current_frame)
         
         self.app = app
         self.socket = SocketIO(self.app)
@@ -202,7 +168,7 @@ class ThermalCamera:
         
     def init_windows(self):
         cv2.namedWindow('Thermal', cv2.WINDOW_GUI_NORMAL)
-        cv2.resizeWindow('Thermal', self.newWidth, self.newHeight)        
+        cv2.resizeWindow('Thermal', self.newWidth, self.newHeight)
 
     def rec(self):
         now = time.strftime("%Y%m%d-%H%M%S")
@@ -576,5 +542,5 @@ def main():
     self.run()
 
 if __name__ == "__main__":
-    self = ThermalCamera()
+    self = ThermalCamera(web=True)
     self.run()

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Stream</title>
+</head>
+<style>
+    body, html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    #videoFrame {
+        object-fit: contain;
+        width: 100%;
+        height: 100vh;
+    }
+</style>
+<body>
+    <img id="videoFrame">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+        socket.on('update_frame', function(data) {
+            document.getElementById('videoFrame').src = 'data:image/jpeg;base64,' + data.current_frame;
+        });
+    </script>
+</body>
+</html>
