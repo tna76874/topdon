@@ -127,7 +127,10 @@ class ThermalCamera:
         self.elapsed = "00:00:00"
         self.snaptime = "None"
         
+        self.videoOut = None
+        self.start = None
         
+        self.heatmap = None
         if self.web == True:
             self.init_webapp()
             self.video_thread = Thread(target=lambda: self.app.run(debug=False, port=self.config['port'], threaded=True, host='0.0.0.0'))
@@ -164,6 +167,26 @@ class ThermalCamera:
         def index():
             return render_template('index.html', current_frame=app.current_frame)
         
+        @app.route('/toggle_recording')
+        def toggle_recording():
+            self._toggle_recording()
+            return ''
+        
+        @app.route('/quit')
+        def quit():
+            self.__del__()
+            return ''
+        
+        @app.route('/cycle_hud')
+        def cycle_hud():
+            self._cycle_hud()
+            return ''
+        
+        @app.route('/take_photo')
+        def take_photo():
+            self.snapshot()
+            return ''
+        
         self.app = app
         self.socket = SocketIO(self.app)
         
@@ -173,8 +196,9 @@ class ThermalCamera:
         self.socket.emit('update_frame', {'current_frame': self.app.current_frame})
         
     def init_windows(self):
-        cv2.namedWindow('Thermal', cv2.WINDOW_GUI_NORMAL)
-        cv2.resizeWindow('Thermal', self.newWidth, self.newHeight)
+        if not self.config['web']:
+            cv2.namedWindow('Thermal', cv2.WINDOW_GUI_NORMAL)
+            cv2.resizeWindow('Thermal', self.newWidth, self.newHeight)
 
     def rec(self):
         now = time.strftime("%Y%m%d-%H%M%S")
@@ -183,10 +207,10 @@ class ThermalCamera:
         )
         return videoOut
 
-    def snapshot(self, heatmap):
+    def snapshot(self):
         now = time.strftime("%Y%m%d-%H%M%S")
         self.snaptime = time.strftime("%H:%M:%S")
-        cv2.imwrite(f'{self.videostore.camera["name"]}_{now}.png', heatmap)
+        cv2.imwrite(f'{self.videostore.camera["name"]}_{now}.png', self.heatmap)
     
     def _process_frame(self, thdata):
         temperatures = ((thdata[..., 0] + thdata[..., 1] * 256) / 64 - 273.15).round(2)
@@ -355,14 +379,16 @@ class ThermalCamera:
                         cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0, 255, 255), 1, cv2.LINE_AA)
                 
                 #display image
-                cv2.imshow('Thermal', heatmap)
+                self.heatmap = heatmap
+                if not self.config['web']: cv2.imshow('Thermal', heatmap)
+                
                 if self.web:
                     self.update_web_frame(heatmap)
                           
                 if self.recording == True:
-                    self.elapsed = (time.time() - start)
+                    self.elapsed = (time.time() - self.start)
                     self.elapsed = time.strftime("%H:%M:%S", time.gmtime(self.elapsed)) 
-                    videoOut.add_frame(heatmap, data = img_data)
+                    self.videoOut.add_frame(heatmap, data = img_data)
                 
                 keyPress = cv2.waitKey(1)
                 if keyPress == ord('a'): #Increase blur radius
@@ -415,6 +441,7 @@ class ThermalCamera:
                     self.alpha = round(self.alpha,1)#fix round error
                     if self.alpha >= 3.0:
                     	self.alpha=3.0
+
                 if keyPress == ord('v'): #contrast-
                     self.alpha -= 0.1
                     self.alpha = round(self.alpha,1)#fix round error
@@ -423,23 +450,16 @@ class ThermalCamera:
                           
                           
                 if keyPress == ord('h'): # cycle through hud options
-                    self.hud = next(self.hud_options)
+                    self._cycle_hud()
                           
                 if keyPress == ord('m'): #m to cycle through color maps
                     self.colormap = next(self.colormap_options)
                           
                 if keyPress == ord('r'):
-                    self.recording = next(self.recording_options)
-
-                    if self.recording == True:
-                        videoOut = VideoRecorder(self.videostore.camera, self.newWidth, self.newHeight)
-                        start = time.time()
-                    else:
-                        self.elapsed = "00:00:00"
-                        del videoOut
+                    self._toggle_recording()
                           
                 if keyPress == ord('i'):
-                    self.snapshot(heatmap)
+                    self.snapshot()
                     
                 if keyPress == ord('o'):
                     self.rotation = next(self.rotation_options)
@@ -475,6 +495,19 @@ class ThermalCamera:
                     cv2.destroyAllWindows()
                     self.__del__()
                     break
+    
+    def _cycle_hud(self):
+        self.hud = next(self.hud_options)            
+    
+    def _toggle_recording(self):
+        self.recording = next(self.recording_options)
+
+        if self.recording == True:
+            self.videoOut = VideoRecorder(self.videostore.camera, self.newWidth, self.newHeight)
+            self.start = time.time()
+        else:
+            self.elapsed = "00:00:00"
+            del self.videoOut
 
                     
     def __del__(self):
