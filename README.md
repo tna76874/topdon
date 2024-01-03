@@ -7,11 +7,11 @@ Python Software to use the Topdon TC001 Thermal Camera on Linux via a webserver.
 
 Access local (or via network)  webinterface to control the Topdon thermal cam.
 
-<video width="640" height="360" controls>   <source src="doc/topdon_viewer_demo.m4v" type="video/mp4">   Your browser does not support the video tag. </video>
+https://github.com/tna76874/topdon/assets/47271687/af8a17ed-03f9-41e8-bd22-39dc8a3c6230
 
 Video after recording - the temperatures of the spots are also saved within an csv file.
 
-<video width="640" height="360" controls>   <source src="doc/TC001_20240103-101243.m4v" type="video/mp4">   Your browser does not support the video tag. </video>
+https://github.com/tna76874/topdon/assets/47271687/6ee63fcc-4ae0-420e-a82a-20a28b4657a5
 
 #### Installation
 
