@@ -86,7 +86,7 @@ class VideoRecorder:
 class ThermalCamera:
     def __init__(self, **kwargs):
         self.config =       {
-                            'web': False,
+                            'web': True,
                             'port' : 5001,
                             'qt' : False,
                             }
@@ -613,7 +613,6 @@ def main():
     
     parser = argparse.ArgumentParser(description='Thermal Camera')
     
-    parser.add_argument('--web', action='store_true', help='Starte die ThermalCamera mit Webunterstützung')
     parser.add_argument('--qt', action='store_true', help='Starte die ThermalCamera mit QT Fenster')
     parser.add_argument('--port', type=int, default=5001, help='Der Port für die Webunterstützung (Standard: 5001)')
 
