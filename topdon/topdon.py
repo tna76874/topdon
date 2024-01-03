@@ -14,6 +14,7 @@ import numpy as np
 import csv
 import argparse
 import time
+from datetime import datetime
 import io
 import base64
 import os
@@ -49,23 +50,28 @@ class VideoRecorder:
         self.camera = camera.copy()
         self.width = width
         self.height = height
-        self.now = time.strftime("%Y%m%d-%H%M%S")
+        self.init_t = datetime.now()
         self.data = list()
 
         self.video_out = self._initialize_video_out()
 
+    def _time_str(self):
+        return self.init_t.strftime("%Y%m%d-%H%M%S")
+
     def _initialize_video_out(self):
-        file_name = f'{self.camera["name"]}_{self.now}.avi'
+        file_name = f'{self.camera["name"]}_{self._time_str()}.avi'
         video_out = cv2.VideoWriter(file_name, cv2.VideoWriter_fourcc(*'XVID'), 25, (self.width, self.height))
         return video_out
 
     def add_frame(self, frame, data=None):
         self.video_out.write(frame)
         if data!=None:
-            self.data.append(data)
+            update_data = {'t':(datetime.now() - self.init_t).total_seconds()}
+            update_data.update(data)
+            self.data.append(update_data)
         
     def save_to_csv(self):
-        csv_file = f'{self.camera["name"]}_{self.now}.csv'
+        csv_file = f'{self.camera["name"]}_{self._time_str()}.csv'
 
         with open(csv_file, 'a', newline='') as file:
             writer = csv.DictWriter(file, fieldnames=self.data[0].keys())
@@ -213,7 +219,6 @@ class ThermalCamera:
             self.target_h = int(x*self.height)
             self.target_w = int(y*self.width)
             self.set_target_pos()
-            
             return ''
         
         
