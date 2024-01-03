@@ -22,6 +22,8 @@ setup(
 	"Flask",
 	"flask_socketio",
 	"pyqrcode",
+	"pandas",
+	"openpyxl",
     ],
     package_data={
         'topdon': ['video.py'],

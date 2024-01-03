@@ -11,7 +11,7 @@ https://github.com/leswright1977/PyThermalCamera
 '''
 import cv2
 import numpy as np
-import csv
+import pandas as pd
 import argparse
 import time
 from datetime import datetime
@@ -32,8 +32,6 @@ import pyqrcode
 import logging
 
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
-
-
 
 try:
     from topdon.video import *
@@ -70,16 +68,10 @@ class VideoRecorder:
             update_data.update(data)
             self.data.append(update_data)
         
-    def save_to_csv(self):
-        csv_file = f'{self.camera["name"]}_{self._time_str()}.csv'
-
-        with open(csv_file, 'a', newline='') as file:
-            writer = csv.DictWriter(file, fieldnames=self.data[0].keys())
-
-            if file.tell() == 0:
-                writer.writeheader()
-
-            writer.writerows(self.data)
+    def save_to_xlsx(self):
+        xlsx_file = f'{self.camera["name"]}_{self._time_str()}.xlsx'
+        DF_data = pd.DataFrame(self.data)
+        DF_data.to_excel(xlsx_file, index=False)
 
     def release(self):
         self.video_out.release()
@@ -87,7 +79,7 @@ class VideoRecorder:
     def __del__(self):
         self.release()
         if len(self.data)!=0:
-            self.save_to_csv()
+            self.save_to_xlsx()
     
 class ThermalCamera:
     def __init__(self, **kwargs):
@@ -235,7 +227,7 @@ class ThermalCamera:
         if self.isqt:
             cv2.namedWindow('Thermal', cv2.WINDOW_GUI_NORMAL)
             cv2.resizeWindow('Thermal', self.newWidth, self.newHeight)
-
+            
     def snapshot(self):
         now = time.strftime("%Y%m%d-%H%M%S")
         self.snaptime = time.strftime("%H:%M:%S")
