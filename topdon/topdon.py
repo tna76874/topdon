@@ -84,18 +84,19 @@ class VersionCheck:
             self.needs_update = True
             print(f'Eine neuere Version ({self.latest_version}) von topdon ist verfügbar! Bitte aktualisiere deine Installation.')
         else:
-            print('Deine topdon-Version ({self.current_version}) ist auf dem neuesten Stand.')
+            print(f'Deine topdon-Version ({self.current_version}) ist auf dem neuesten Stand.')
             
     def ensure_latest_version(self):
         if not self.checked:
             self.run_update_checker()
             
-        try:
-            subprocess.run(['pip3', 'install', '--upgrade', f'git+https://github.com/tna76874/topdon.git'])
-            print('topdon erfolgreich aktualisiert!')
-            exit()
-        except Exception as e:
-            print(f'Fehler bei der Aktualisierung von topdon: {e}')
+        if self.needs_update:    
+            try:
+                subprocess.run(['pip3', 'install', '--upgrade', f'git+https://github.com/tna76874/topdon.git'])
+                print('topdon erfolgreich aktualisiert!')
+                exit()
+            except Exception as e:
+                print(f'Fehler bei der Aktualisierung von topdon: {e}')
 
 class PhotoSnapshot:
     def __init__(self, camera, imdata, thdata):
