@@ -403,24 +403,11 @@ class ThermalCamera:
                     	cv2.FONT_HERSHEY_SIMPLEX, 0.4,(40, 40, 255), 1, cv2.LINE_AA)
                 
                 if (self.hud!='none'):
-                    #Yeah, this looks like we can probably do this next bit more efficiently!
-                    #display floating max temp
-                    if maxtemp > avgtemp+self.threshold:
-                        cv2.circle(heatmap, (mrow*self.scale, mcol*self.scale), 5, (0,0,0), 2)
-                        cv2.circle(heatmap, (mrow*self.scale, mcol*self.scale), 5, (0,0,255), -1)
-                        cv2.putText(heatmap,str(maxtemp)+' C', ((mrow*self.scale)+10, (mcol*self.scale)+5),\
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0,0,0), 2, cv2.LINE_AA)
-                        cv2.putText(heatmap,str(maxtemp)+' C', ((mrow*self.scale)+10, (mcol*self.scale)+5),\
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0, 255, 255), 1, cv2.LINE_AA)
-                              
-                    #display floating min temp
-                    if mintemp < avgtemp-self.threshold:
-                        cv2.circle(heatmap, (lrow*self.scale, lcol*self.scale), 5, (0,0,0), 2)
-                        cv2.circle(heatmap, (lrow*self.scale, lcol*self.scale), 5, (255,0,0), -1)
-                        cv2.putText(heatmap,str(mintemp)+' C', ((lrow*self.scale)+10, (lcol*self.scale)+5),\
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0,0,0), 2, cv2.LINE_AA)
-                        cv2.putText(heatmap,str(mintemp)+' C', ((lrow*self.scale)+10, (lcol*self.scale)+5),\
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0, 255, 255), 1, cv2.LINE_AA)
+                    if maxtemp > avgtemp + self.threshold:
+                        self._draw_circle_text(heatmap, mrow, mcol, maxtemp, (0, 0, 255))
+                    
+                    if mintemp < avgtemp - self.threshold:
+                        self._draw_circle_text(heatmap, lrow, lcol, mintemp, (255, 0, 0))
                 
                 #display image
                 self.heatmap = heatmap
@@ -536,6 +523,12 @@ class ThermalCamera:
                     cv2.destroyAllWindows()
                     self.__del__()
                     break
+        
+    def _draw_circle_text(self, heatmap, row, col, temp, color):
+        cv2.circle(heatmap, (row * self.scale, col * self.scale), 5, (0, 0, 0), 2)
+        cv2.circle(heatmap, (row * self.scale, col * self.scale), 5, color, -1)
+        cv2.putText(heatmap, str(temp) + ' C', ((row * self.scale) + 10, (col * self.scale) + 5),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 255), 1, cv2.LINE_AA)
                 
     def _flip_image(self):
         self.flip = next(self.flip_options)
