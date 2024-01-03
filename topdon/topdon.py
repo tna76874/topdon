@@ -22,7 +22,7 @@ import sys
 import socket
 from itertools import cycle
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, send_from_directory
 from flask_socketio import SocketIO
 from threading import Thread
 
@@ -172,6 +172,10 @@ class ThermalCamera:
         def serve_script(script_name):
             return app.send_static_file(f'scripts/{script_name}')
         
+        @app.route('/css/<path:css_path>')
+        def serve_css(css_path):
+            return app.send_static_file(os.path.join('css',css_path))
+        
         @app.route('/')
         def index():
             return render_template('index.html', current_frame=app.current_frame)
@@ -194,6 +198,11 @@ class ThermalCamera:
         @app.route('/rotate_image')
         def rotate_image():
             self._rotate_image()
+            return ''
+        
+        @app.route('/flip_image')
+        def flip_image():
+            self._flip_image()
             return ''
         
         @app.route('/send_coordinates')

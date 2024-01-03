@@ -1,2 +1,3 @@
 include topdon/templates/*
 include topdon/static/scripts/*
+include topdon/static/css/*

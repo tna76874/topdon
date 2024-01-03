@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/fontawesome/6.5.1/css/all.min.css">
     <title>Video Stream</title>
 </head>
 <style>
@@ -47,11 +48,11 @@
 </style>
 <body>
     <div id="toolbar">
-        <button onclick="cycleHud()">Cycle Hud</button>
-        <button onclick="rotateImage()">Rotate Image</button>
-        <button onclick="flipImage()">Flip Image</button>
-        <button onclick="takePhoto()">Photo</button>
-        <button id="recordButton" onclick="toggleRecording()">Start Recording</button>
+        <button onclick="cycleHud()"><i class="fa-solid fa-chart-simple"></i> Cycle Hud</button>
+        <button onclick="rotateImage()"><i class="fa-solid fa-rotate"></i> Rotate Image</button>
+        <button onclick="flipImage()"><i class="fa-solid fa-arrows-left-right"></i> Flip Image</button>
+        <button onclick="takePhoto()"><i class="fa-solid fa-camera"></i> Photo</button>
+        <button id="recordButton" onclick="toggleRecording()"><i class="fa-solid fa-video"></i> Start Recording</button>        
     </div>
     <div id="videoContainer">
         <img id="videoFrame">
@@ -76,12 +77,12 @@
 
         function updateRecordButtonLabel() {
             var recordButton = document.getElementById('recordButton');
-            if (recording) {
-                recordButton.innerText = "Stop Recording";
-            } else {
-                recordButton.innerText = "Start Recording";
-            }
+            var iconColor = recording ? 'red' : 'black';
+            var textColor = recording ? 'red' : 'black';
+
+            recordButton.innerHTML = `<i class="fa-solid fa-video" style="color: ${iconColor};"></i> <span style="color: ${textColor};"> ${recording ? 'Stop' : 'Start'} Recording</span>`;
         }
+
 
         function flipImage() {
             sendAjaxRequest("/flip_image");
