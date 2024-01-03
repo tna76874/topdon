@@ -83,6 +83,7 @@ class ThermalCamera:
         self.config =       {
                             'web': False,
                             'port' : 5001,
+                            'qt' : True,
                             }
         self.config.update(kwargs)
         self.videostore = Video()
@@ -129,6 +130,8 @@ class ThermalCamera:
         
         self.videoOut = None
         self.start = None
+        
+        self.isqt = not self.config['web'] or self.config['qt']
         
         self.heatmap = None
         if self.web == True:
@@ -187,16 +190,23 @@ class ThermalCamera:
             self.snapshot()
             return ''
         
+        @app.route('/rotate_image')
+        def rotate_image():
+            self._rotate_image()
+            return ''
+        
+        
         self.app = app
         self.socket = SocketIO(self.app)
-        
-    def update_web_frame(self,frame):
+
+    def update_web_frame(self, frame):
         _, buffer = cv2.imencode('.jpg', frame)
         self.app.current_frame = base64.b64encode(buffer).decode('utf-8')
-        self.socket.emit('update_frame', {'current_frame': self.app.current_frame})
+        self.socket.emit('update_frame', {'current_frame': self.app.current_frame, 'image_width': self.newWidth, 'image_height': self.newHeight})
+
         
     def init_windows(self):
-        if not self.config['web']:
+        if self.isqt:
             cv2.namedWindow('Thermal', cv2.WINDOW_GUI_NORMAL)
             cv2.resizeWindow('Thermal', self.newWidth, self.newHeight)
 
@@ -380,7 +390,7 @@ class ThermalCamera:
                 
                 #display image
                 self.heatmap = heatmap
-                if not self.config['web']: cv2.imshow('Thermal', heatmap)
+                if self.isqt : cv2.imshow('Thermal', heatmap)
                 
                 if self.web:
                     self.update_web_frame(heatmap)
@@ -462,13 +472,7 @@ class ThermalCamera:
                     self.snapshot()
                     
                 if keyPress == ord('o'):
-                    self.rotation = next(self.rotation_options)
-                    self.width, self.height = self.height, self.width
-                    self.newWidth, self.newHeight= self.newHeight, self.newWidth
-                    self.target_w, self.target_h = self.target_h, self.target_w 
-                    self.set_target_pos()
-                    cv2.destroyAllWindows()
-                    self.init_windows()
+                    self._rotate_image()
                     
                 if keyPress == ord('t'):    
                     self.flip = next(self.flip_options)
@@ -495,6 +499,15 @@ class ThermalCamera:
                     cv2.destroyAllWindows()
                     self.__del__()
                     break
+
+    def _rotate_image(self):
+        self.rotation = next(self.rotation_options)
+        self.width, self.height = self.height, self.width
+        self.newWidth, self.newHeight= self.newHeight, self.newWidth
+        self.target_w, self.target_h = self.target_h, self.target_w 
+        self.set_target_pos()
+        if self.isqt: cv2.destroyAllWindows()
+        self.init_windows()
     
     def _cycle_hud(self):
         self.hud = next(self.hud_options)            
@@ -573,6 +586,7 @@ def main():
     parser = argparse.ArgumentParser(description='Thermal Camera')
     
     parser.add_argument('--web', action='store_true', help='Starte die ThermalCamera mit Webunterstützung')
+    parser.add_argument('--qt', action='store_false', help='Starte die ThermalCamera ohne QT Fenster')
     parser.add_argument('--port', type=int, default=5001, help='Der Port für die Webunterstützung (Standard: 5001)')
 
     args = parser.parse_args()
@@ -581,5 +595,5 @@ def main():
     self.run()
 
 if __name__ == "__main__":
-    self = ThermalCamera(web=True)
+    self = ThermalCamera(web=True, qt=False)
     self.run()

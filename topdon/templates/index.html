@@ -30,6 +30,7 @@
         font-size: min(max(2vw, 20pt), 30pt);
         margin: 2px 10px;
     }
+
     #videoContainer {
         flex: 1;
         position: relative;
@@ -48,6 +49,7 @@
     <div id="toolbar">
         <button onclick="quit()">Quit</button>
         <button onclick="cycleHud()">Cycle Hud</button>
+        <button onclick="rotateImage()">Rotate Image</button>
         <button onclick="takePhoto()">Photo</button>
         <button onclick="toggleRecording()">Recording</button>
     </div>
@@ -63,7 +65,7 @@
             document.getElementById('videoFrame').src = 'data:image/jpeg;base64,' + data.current_frame;
         });
 
-
+        // BUTTONS
         function toggleRecording() {
             sendAjaxRequest("/toggle_recording");
         }
@@ -78,6 +80,10 @@
 
         function takePhoto() {
             sendAjaxRequest("/take_photo");
+        }
+
+        function rotateImage() {
+            sendAjaxRequest("/rotate_image");
         }
 
         function sendAjaxRequest(url) {
