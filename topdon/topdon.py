@@ -81,7 +81,7 @@ class VersionCheck:
     
     def check_for_update(self):
         if version.parse(self.current_version) < version.parse(self.latest_version):
-            self.needs_update = False
+            self.needs_update = True
             print(f'Eine neuere Version ({self.latest_version}) von topdon ist verfügbar! Bitte aktualisiere deine Installation.')
         else:
             print('Deine topdon-Version ({self.current_version}) ist auf dem neuesten Stand.')
@@ -687,10 +687,10 @@ def main():
     
     if args.update:
         checkVersion.ensure_latest_version()
-    else:   
+    else:
         self = ThermalCamera(**vars(args))
         self.run()
 
 if __name__ == "__main__":
     self = ThermalCamera(web=False, qt=False)
-    # self.run()
+    self.run()
