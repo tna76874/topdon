@@ -419,7 +419,10 @@ class ThermalCamera:
                 if self.recording == True:
                     self.elapsed = (time.time() - self.start)
                     self.elapsed = time.strftime("%H:%M:%S", time.gmtime(self.elapsed)) 
-                    self.videoOut.add_frame(heatmap, data = img_data)
+                    try:
+                        self.videoOut.add_frame(heatmap, data = img_data)
+                    except:
+                        self.recording = False
                 
                 keyPress = cv2.waitKey(1)
                 if keyPress == ord('a'): #Increase blur radius
