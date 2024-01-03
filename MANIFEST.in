@@ -1,3 +1,2 @@
-include topdon/templates/*
-include topdon/static/scripts/*
-include topdon/static/css/*
+recursive-include topdon/templates *
+recursive-include topdon/static *
