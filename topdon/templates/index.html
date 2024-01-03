@@ -111,13 +111,11 @@
         }
 
         // TARGET
-        // Click event for the image
         document.getElementById('videoFrame').addEventListener('click', function(event) {
             var image = document.getElementById('videoFrame');
             var x = event.offsetX / image.width;
             var y = event.offsetY / image.height;
 
-            // Send normalized coordinates to the server via AJAX
             sendCoordinatesToServer(x, y);
         });
 
