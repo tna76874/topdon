@@ -50,19 +50,22 @@ class VersionCheck:
     def __init__(self):
         self.needs_update = False
         self.checked = False
+        self.current_version = None
+        self.latest_version = None
         self.run_update_checker()
     
     def run_update_checker(self):
-        current_version = topdon.__version__
-        latest_version = get_latest_version()
+        self.current_version = topdon.__version__
+        self.latest_version = self.get_latest_version()
         
         try:
-            if latest_version!=None:
-                check_for_update(current_version, latest_version)
+            if self.latest_version!=None:
+                self.check_for_update()
                 self.checked = True
             else:
                 print('Konnte die neueste Version nicht abrufen.')
-        except: pass
+        except:
+            print('Error getting version.')
 
 
     def get_latest_version(self):
@@ -76,24 +79,23 @@ class VersionCheck:
                     return latest_version
         return None
     
-    def check_for_update(self, current_version, latest_version):
-        if version.parse(current_version) < version.parse(latest_version):
+    def check_for_update(self):
+        if version.parse(self.current_version) < version.parse(self.latest_version):
             self.needs_update = False
-            print(f'Eine neuere Version ({latest_version}) von topdon ist verfügbar! Bitte aktualisiere deine Installation.')
+            print(f'Eine neuere Version ({self.latest_version}) von topdon ist verfügbar! Bitte aktualisiere deine Installation.')
         else:
-            print('Deine topdon-Version ist auf dem neuesten Stand.')
+            print('Deine topdon-Version ({self.current_version}) ist auf dem neuesten Stand.')
             
     def ensure_latest_version(self):
         if not self.checked:
             self.run_update_checker()
             
-        if self.needs_update:
-            try:
-                subprocess.run(['pip3', 'install', '--upgrade', f'git+https://github.com/tna76874/topdon.git'])
-                print('topdon erfolgreich aktualisiert!')
-                exit()
-            except Exception as e:
-                print(f'Fehler bei der Aktualisierung von topdon: {e}')
+        try:
+            subprocess.run(['pip3', 'install', '--upgrade', f'git+https://github.com/tna76874/topdon.git'])
+            print('topdon erfolgreich aktualisiert!')
+            exit()
+        except Exception as e:
+            print(f'Fehler bei der Aktualisierung von topdon: {e}')
 
 class PhotoSnapshot:
     def __init__(self, camera, imdata, thdata):
@@ -685,10 +687,10 @@ def main():
     
     if args.update:
         checkVersion.ensure_latest_version()
-        
-    self = ThermalCamera(**vars(args))
-    self.run()
+    else:   
+        self = ThermalCamera(**vars(args))
+        self.run()
 
 if __name__ == "__main__":
     self = ThermalCamera(web=False, qt=False)
-    self.run()
+    # self.run()
