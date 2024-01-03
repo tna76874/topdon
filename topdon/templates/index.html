@@ -22,13 +22,13 @@
         justify-content: center;
         align-items: center;
         padding: 10px;
-        /* height: 10vw; */
         background-color: #333;
         color: white;
+        height: auto;
     }
 
     #toolbar button {
-        font-size: min(max(2vw, 20pt), 30pt);
+        font-size: min(max(2vw, 20pt), 12pt);
         margin: 2px 10px;
     }
 
@@ -43,7 +43,7 @@
         object-fit: contain;
         width: 100%;
         max-width: 100%;
-        max-height: calc(100vh - var(--toolbarHeight, 0px));
+        max-height: 100vh;
     }
 </style>
 <body>
@@ -60,6 +60,14 @@
 
     <script src="scripts/socket.io.js"></script>
     <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Hier die Höhe des videoFrame basierend auf der Toolbar-Höhe aktualisieren
+            const toolbar = document.getElementById('toolbar');
+            const toolbarHeight = toolbar.offsetHeight;
+            const videoFrame = document.getElementById('videoFrame');
+            videoFrame.style.maxHeight = `calc(100vh - ${toolbarHeight}px)`;
+        });
+
         var socket = io.connect('http://' + document.domain + ':' + location.port);
 
         socket.on('update_frame', function(data) {
