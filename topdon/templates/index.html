@@ -47,11 +47,11 @@
 </style>
 <body>
     <div id="toolbar">
-        <button onclick="quit()">Quit</button>
         <button onclick="cycleHud()">Cycle Hud</button>
         <button onclick="rotateImage()">Rotate Image</button>
+        <button onclick="flipImage()">Flip Image</button>
         <button onclick="takePhoto()">Photo</button>
-        <button onclick="toggleRecording()">Recording</button>
+        <button id="recordButton" onclick="toggleRecording()">Start Recording</button>
     </div>
     <div id="videoContainer">
         <img id="videoFrame">
@@ -66,8 +66,25 @@
         });
 
         // BUTTONS
+        var recording = false; 
+
         function toggleRecording() {
+            recording = !recording;
+            updateRecordButtonLabel();
             sendAjaxRequest("/toggle_recording");
+        }
+
+        function updateRecordButtonLabel() {
+            var recordButton = document.getElementById('recordButton');
+            if (recording) {
+                recordButton.innerText = "Stop Recording";
+            } else {
+                recordButton.innerText = "Start Recording";
+            }
+        }
+
+        function flipImage() {
+            sendAjaxRequest("/flip_image");
         }
 
         function quit() {
@@ -88,6 +105,26 @@
 
         function sendAjaxRequest(url) {
             var xhr = new XMLHttpRequest();
+            xhr.open("GET", url, true);
+            xhr.send();
+        }
+
+        // TARGET
+        // Click event for the image
+        document.getElementById('videoFrame').addEventListener('click', function(event) {
+            var image = document.getElementById('videoFrame');
+            var x = event.offsetX / image.width;
+            var y = event.offsetY / image.height;
+
+            // Send normalized coordinates to the server via AJAX
+            sendCoordinatesToServer(x, y);
+        });
+
+        function sendCoordinatesToServer(x, y) {
+            var xhr = new XMLHttpRequest();
+            var url = "/send_coordinates";
+            url += "?x=" + encodeURIComponent(x) + "&y=" + encodeURIComponent(y);
+
             xhr.open("GET", url, true);
             xhr.send();
         }

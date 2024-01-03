@@ -22,11 +22,16 @@ import sys
 import socket
 from itertools import cycle
 
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from flask_socketio import SocketIO
 from threading import Thread
 
 import pyqrcode
+
+import logging
+
+logging.getLogger('werkzeug').setLevel(logging.ERROR)
+
 
 
 try:
@@ -83,7 +88,7 @@ class ThermalCamera:
         self.config =       {
                             'web': False,
                             'port' : 5001,
-                            'qt' : True,
+                            'qt' : False,
                             }
         self.config.update(kwargs)
         self.videostore = Video()
@@ -119,7 +124,7 @@ class ThermalCamera:
         
         self.rad = 0  # blur radius
         self.threshold = 2
-        self.hud_options = cycle(['all','cross','spots','none'])
+        self.hud_options = cycle(['cross','spots','none','all'])
         self.hud = next(self.hud_options)
         
         self.recording_options = cycle([False,True])
@@ -136,12 +141,13 @@ class ThermalCamera:
         self.heatmap = None
         if self.web == True:
             self.init_webapp()
-            self.video_thread = Thread(target=lambda: self.app.run(debug=False, port=self.config['port'], threaded=True, host='0.0.0.0'))
+            self.video_thread = Thread(target=lambda: self.app.run(debug=False, port=self.config['port'], threaded=True, host='0.0.0.0', use_reloader=False))
             self.video_thread.start()
             ip_adress = self.get_ip_address()
             url = f'http://{ip_adress}:{self.config["port"]}'
             url_qr = pyqrcode.create(url).terminal(module_color='white', background='black')
             print(f'############################\n\nOpen: {url}\n{url_qr}\n\n############################')
+            print('\n\n ---> CTRL+C to quit')
             self.open_port()
             
     def set_target_pos(self):
@@ -175,11 +181,6 @@ class ThermalCamera:
             self._toggle_recording()
             return ''
         
-        @app.route('/quit')
-        def quit():
-            self.__del__()
-            return ''
-        
         @app.route('/cycle_hud')
         def cycle_hud():
             self._cycle_hud()
@@ -193,6 +194,17 @@ class ThermalCamera:
         @app.route('/rotate_image')
         def rotate_image():
             self._rotate_image()
+            return ''
+        
+        @app.route('/send_coordinates')
+        def send_coordinates():
+            y = float(request.args.get('x'))
+            x = float(request.args.get('y'))
+            
+            self.target_h = int(x*self.height)
+            self.target_w = int(y*self.width)
+            self.set_target_pos()
+            
             return ''
         
         
@@ -242,7 +254,7 @@ class ThermalCamera:
         self.cap = self.videostore.cap
 
         self.init_windows()
-        self.print_thermal_camera_info()
+        if self.isqt: self.print_thermal_camera_info()
         while self.cap.isOpened():
             ret, frame = self.cap.read()
             if ret == True:
@@ -474,8 +486,8 @@ class ThermalCamera:
                 if keyPress == ord('o'):
                     self._rotate_image()
                     
-                if keyPress == ord('t'):    
-                    self.flip = next(self.flip_options)
+                if keyPress == ord('t'): 
+                    self._flip_image()
                     
                 if keyPress == ord('p'):  # oben
                     if self.target_h - self.targetstep >= 0:
@@ -499,6 +511,10 @@ class ThermalCamera:
                     cv2.destroyAllWindows()
                     self.__del__()
                     break
+                
+    def _flip_image(self):
+        self.flip = next(self.flip_options)
+
 
     def _rotate_image(self):
         self.rotation = next(self.rotation_options)
@@ -530,9 +546,9 @@ class ThermalCamera:
         if self.web == True:
             try:
                 self.close_port()
+                self.video_thread.join(timeout=0)
                 if self.video_thread.is_alive():
                     self.video_thread.terminate()
-                    self.video_thread.join()
             except: pass
 
     def check_sudo(self):
@@ -586,7 +602,7 @@ def main():
     parser = argparse.ArgumentParser(description='Thermal Camera')
     
     parser.add_argument('--web', action='store_true', help='Starte die ThermalCamera mit Webunterstützung')
-    parser.add_argument('--qt', action='store_false', help='Starte die ThermalCamera ohne QT Fenster')
+    parser.add_argument('--qt', action='store_true', help='Starte die ThermalCamera mit QT Fenster')
     parser.add_argument('--port', type=int, default=5001, help='Der Port für die Webunterstützung (Standard: 5001)')
 
     args = parser.parse_args()
