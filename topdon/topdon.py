@@ -43,6 +43,29 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 template_folder = os.path.join(current_dir, 'templates')
 static_folder = os.path.join(current_dir, 'static')
 
+class PhotoSnapshot:
+    def __init__(self, camera, imdata, thdata):
+        self.camera = camera.copy()
+        self.imdata = imdata
+        self.thdata = thdata
+        self.init_t = datetime.now()
+        
+        self.save_to_xlsx()
+        self.save_image()
+
+    def _time_str(self):
+        return self.init_t.strftime("%Y%m%d-%H%M%S")
+    
+    def save_to_xlsx(self):
+        xlsx_file = f'{self.camera["name"]}_{self._time_str()}.xlsx'
+        DF_data = pd.DataFrame(self.thdata)
+        DF_data.index += 1
+        DF_data.columns += 1
+        DF_data.to_excel(xlsx_file, index=True)
+        
+    def save_image(self):
+        cv2.imwrite(f'{self.camera["name"]}_{self._time_str()}.png', self.imdata)
+    
 class VideoRecorder:
     def __init__(self, camera, width, height):
         self.camera = camera.copy()
@@ -137,6 +160,7 @@ class ThermalCamera:
         self.isqt = not self.config['web'] or self.config['qt']
         
         self.heatmap = None
+        self.thdata = None
         if self.web == True:
             self.init_webapp()
             self.video_thread = Thread(target=lambda: self.app.run(debug=False, port=self.config['port'], threaded=True, host='0.0.0.0', use_reloader=False))
@@ -176,7 +200,7 @@ class ThermalCamera:
         
         @app.route('/')
         def index():
-            return render_template('index.html', current_frame=app.current_frame)
+            return render_template('index.html', current_frame=app.current_frame, camera=self.videostore.camera)
         
         @app.route('/toggle_recording')
         def toggle_recording():
@@ -228,10 +252,8 @@ class ThermalCamera:
             cv2.namedWindow('Thermal', cv2.WINDOW_GUI_NORMAL)
             cv2.resizeWindow('Thermal', self.newWidth, self.newHeight)
             
-    def snapshot(self):
-        now = time.strftime("%Y%m%d-%H%M%S")
-        self.snaptime = time.strftime("%H:%M:%S")
-        cv2.imwrite(f'{self.videostore.camera["name"]}_{now}.png', self.heatmap)
+    def snapshot(self):       
+        PhotoSnapshot(self.videostore.camera, self.heatmap, self.thdata)
     
     def _process_frame(self, thdata):
         temperatures = ((thdata[..., 0] + thdata[..., 1] * 256) / 64 - 273.15).round(2)
@@ -246,7 +268,7 @@ class ThermalCamera:
         posmin = thdata[..., 1].argmin()
         lcol, lrow = divmod(posmin, self.width)
     
-        return temp, maxtemp, mintemp, avgtemp, mcol, mrow, lcol, lrow
+        return temp, maxtemp, mintemp, avgtemp, mcol, mrow, lcol, lrow, temperatures
 
     def run(self):
         self.videostore.open()
@@ -268,7 +290,8 @@ class ThermalCamera:
                     thdata = cv2.flip(thdata, 1)
 
                    
-                temp, maxtemp, mintemp, avgtemp, mcol, mrow, lcol, lrow = self._process_frame(thdata)
+                temp, maxtemp, mintemp, avgtemp, mcol, mrow, lcol, lrow, temperatures = self._process_frame(thdata)
+                self.thdata = temperatures
                 
                 img_data = {
                                 'avg_temperature': avgtemp,
