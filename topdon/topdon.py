@@ -360,13 +360,6 @@ class ThermalCamera:
                     heatmap = cv2.applyColorMap(bgr, cv2.COLORMAP_RAINBOW)
                     heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
                     cmapText = 'Inv Rainbow'
-                    
-                # # Normalisiere die Temperaturen auf den Wertebereich 0-255
-                # normalized_temps = cv2.normalize(self.thdata, None, 0, 255, cv2.NORM_MINMAX)
-                
-                # # Wende eine Farbkarte an, z.B. Jet
-                # heatmap = cv2.applyColorMap(np.uint8(normalized_temps), cv2.COLORMAP_JET)
-
                 
                           
                 if (self.hud=='all') or (self.hud=='cross'):
@@ -440,106 +433,108 @@ class ThermalCamera:
                         self.videoOut.add_frame(heatmap, data = img_data)
                     except:
                         self.recording = False
-                
-                keyPress = cv2.waitKey(1)
-                if keyPress == ord('a'): #Increase blur radius
-                    self.rad += 1
-                if keyPress == ord('z'): #Decrease blur radius
-                    self.rad -= 1
-                    if self.rad <= 0:
-                    	self.rad = 0
-                          
-                if keyPress == ord('s'): #Increase threshold
-                    self.threshold += 1
-                if keyPress == ord('x'): #Decrease threashold
-                    self.threshold -= 1
-                    if self.threshold <= 0:
-                    	self.threshold = 0
-                          
-                if keyPress == ord('d'): #Increase scale
-                    self.scale += 1
-                    if self.scale >=5:
-                    	self.scale = 5
-                    self.newWidth = self.width*self.scale
-                    self.newHeight = self.height*self.scale
-                    self.set_target_pos()
-                    if self.dispFullscreen == False:
-                    	cv2.resizeWindow('Thermal', self.newWidth,self.newHeight)
                         
-                if keyPress == ord('c'): #Decrease scale
-                    self.scale -= 1
-                    if self.scale <= 1:
-                    	self.scale = 1
-                    self.newWidth = self.width*self.scale
-                    self.newHeight = self.height*self.scale
-                    self.set_target_pos()
-                    if self.dispFullscreen == False:
-                    	cv2.resizeWindow('Thermal', self.newWidth,self.newHeight)
-                          
-                if keyPress == ord('w'): #toggle fullscreen
-                    self.dispFullscreen = next(self.dispFullscreen_options)
-
-                    if self.dispFullscreen==True:
-                        cv2.namedWindow('Thermal',cv2.WND_PROP_FULLSCREEN)
-                        cv2.setWindowProperty('Thermal',cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
-                    elif self.dispFullscreen==False:
-                        cv2.namedWindow('Thermal',cv2.WINDOW_GUI_NORMAL)
-                        cv2.setWindowProperty('Thermal',cv2.WND_PROP_AUTOSIZE,cv2.WINDOW_GUI_NORMAL)
-                        cv2.resizeWindow('Thermal', self.newWidth,self.newHeight)                                   
-
-                if keyPress == ord('f'): #contrast+
-                    self.alpha += 0.1
-                    self.alpha = round(self.alpha,1)#fix round error
-                    if self.alpha >= 3.0:
-                    	self.alpha=3.0
-
-                if keyPress == ord('v'): #contrast-
-                    self.alpha -= 0.1
-                    self.alpha = round(self.alpha,1)#fix round error
-                    if self.alpha<=0:
-                    	self.alpha = 0.0
-                          
-                          
-                if keyPress == ord('h'): # cycle through hud options
-                    self._cycle_hud()
-                          
-                if keyPress == ord('m'): #m to cycle through color maps
-                    self.colormap = next(self.colormap_options)
-                          
-                if keyPress == ord('r'):
-                    self._toggle_recording()
-                          
-                if keyPress == ord('i'):
-                    self.snapshot()
-                    
-                if keyPress == ord('o'):
-                    self._rotate_image()
-                    
-                if keyPress == ord('t'): 
-                    self._flip_image()
-                    
-                if keyPress == ord('p'):  # oben
-                    if self.target_h - self.targetstep >= 0:
-                        self.target_h -= self.targetstep
+                        
+                if self.isqt:
+                    keyPress = cv2.waitKey(1)
+                    if keyPress == ord('a'): #Increase blur radius
+                        self.rad += 1
+                    if keyPress == ord('z'): #Decrease blur radius
+                        self.rad -= 1
+                        if self.rad <= 0:
+                        	self.rad = 0
+                              
+                    if keyPress == ord('s'): #Increase threshold
+                        self.threshold += 1
+                    if keyPress == ord('x'): #Decrease threashold
+                        self.threshold -= 1
+                        if self.threshold <= 0:
+                        	self.threshold = 0
+                              
+                    if keyPress == ord('d'): #Increase scale
+                        self.scale += 1
+                        if self.scale >=5:
+                        	self.scale = 5
+                        self.newWidth = self.width*self.scale
+                        self.newHeight = self.height*self.scale
                         self.set_target_pos()
-                if keyPress == 214:  # unten
-                    if self.target_h + self.targetstep <= self.height:
-                        self.target_h += self.targetstep
+                        if self.dispFullscreen == False:
+                        	cv2.resizeWindow('Thermal', self.newWidth,self.newHeight)
+                            
+                    if keyPress == ord('c'): #Decrease scale
+                        self.scale -= 1
+                        if self.scale <= 1:
+                        	self.scale = 1
+                        self.newWidth = self.width*self.scale
+                        self.newHeight = self.height*self.scale
                         self.set_target_pos()
-                if keyPress == ord('l'):  # links
-                    if self.target_w - self.targetstep >= 0:
-                        self.target_w -= self.targetstep
-                        self.set_target_pos()
-                if keyPress == 196:  # rechts
-                    if self.target_w + self.targetstep <= self.width:
-                        self.target_w += self.targetstep
-                        self.set_target_pos()
-                          
-                if keyPress == ord('q'):
-                    self.cap.release()
-                    cv2.destroyAllWindows()
-                    self.__del__()
-                    break
+                        if self.dispFullscreen == False:
+                        	cv2.resizeWindow('Thermal', self.newWidth,self.newHeight)
+                              
+                    if keyPress == ord('w'): #toggle fullscreen
+                        self.dispFullscreen = next(self.dispFullscreen_options)
+    
+                        if self.dispFullscreen==True:
+                            cv2.namedWindow('Thermal',cv2.WND_PROP_FULLSCREEN)
+                            cv2.setWindowProperty('Thermal',cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
+                        elif self.dispFullscreen==False:
+                            cv2.namedWindow('Thermal',cv2.WINDOW_GUI_NORMAL)
+                            cv2.setWindowProperty('Thermal',cv2.WND_PROP_AUTOSIZE,cv2.WINDOW_GUI_NORMAL)
+                            cv2.resizeWindow('Thermal', self.newWidth,self.newHeight)                                   
+    
+                    if keyPress == ord('f'): #contrast+
+                        self.alpha += 0.1
+                        self.alpha = round(self.alpha,1)#fix round error
+                        if self.alpha >= 3.0:
+                        	self.alpha=3.0
+    
+                    if keyPress == ord('v'): #contrast-
+                        self.alpha -= 0.1
+                        self.alpha = round(self.alpha,1)#fix round error
+                        if self.alpha<=0:
+                        	self.alpha = 0.0
+                              
+                              
+                    if keyPress == ord('h'): # cycle through hud options
+                        self._cycle_hud()
+                              
+                    if keyPress == ord('m'): #m to cycle through color maps
+                        self.colormap = next(self.colormap_options)
+                              
+                    if keyPress == ord('r'):
+                        self._toggle_recording()
+                              
+                    if keyPress == ord('i'):
+                        self.snapshot()
+                        
+                    if keyPress == ord('o'):
+                        self._rotate_image()
+                        
+                    if keyPress == ord('t'): 
+                        self._flip_image()
+                        
+                    if keyPress == ord('p'):  # oben
+                        if self.target_h - self.targetstep >= 0:
+                            self.target_h -= self.targetstep
+                            self.set_target_pos()
+                    if keyPress == 214:  # unten
+                        if self.target_h + self.targetstep <= self.height:
+                            self.target_h += self.targetstep
+                            self.set_target_pos()
+                    if keyPress == ord('l'):  # links
+                        if self.target_w - self.targetstep >= 0:
+                            self.target_w -= self.targetstep
+                            self.set_target_pos()
+                    if keyPress == 196:  # rechts
+                        if self.target_w + self.targetstep <= self.width:
+                            self.target_w += self.targetstep
+                            self.set_target_pos()
+                              
+                    if keyPress == ord('q'):
+                        self.cap.release()
+                        cv2.destroyAllWindows()
+                        self.__del__()
+                        break
         
     def _draw_circle_text(self, heatmap, row, col, temp, color):
         cv2.circle(heatmap, (row * self.scale, col * self.scale), 5, (0, 0, 0), 2)
@@ -650,5 +645,5 @@ def main():
         self.run()
 
 if __name__ == "__main__":
-    self = ThermalCamera(web=False, qt=True)
+    self = ThermalCamera(web=True, qt=False)
     self.run()
