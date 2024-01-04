@@ -124,7 +124,7 @@ class Video:
         cap_fps = cap.get(cv2.CAP_PROP_FPS)
         if (cap_res != topdon_resolution or cap_fps != topdon_fps):
             raise IndexError(
-                f"Resolution/FPS of camera id {camera_id} doesn't match. It's probably not a P2 Pro. (Got: {cap_res[0]}x{cap_res[1]}@{cap_fps})")
+                f"Resolution/FPS of camera id {camera_id} doesn't match. (Got: {cap_res[0]}x{cap_res[1]}@{cap_fps})")
 
         # disable automatic YUY2->RGB conversion of OpenCV
         cap.set(cv2.CAP_PROP_CONVERT_RGB, 0)

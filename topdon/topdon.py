@@ -255,9 +255,18 @@ class ThermalCamera:
             
     def snapshot(self):       
         PhotoSnapshot(self.videostore.camera, self.heatmap, self.thdata)
+        
+    def _convert_raw_temp_data_to_kelvin(self, thdata):
+        """
+        thdata[..., 1] contains just some offset/calibration in the range about 300 K
+        thdata[..., 0] contains a little temp offset
+        ... /64 is equivalent to the bitshift operation >> 6. This way, the temperature is only encoded via integer numbers.
+        """
+        return (thdata[..., 0] + thdata[..., 1] * 256) / 64 
     
-    def _process_frame(self, thdata):
-        temperatures = ((thdata[..., 0] + thdata[..., 1] * 256) / 64 - 273.15).round(2)
+    def _process_frame(self, thdata, rnd = 2):
+        # converting kelvon to celsius
+        temperatures = (self._convert_raw_temp_data_to_kelvin(thdata) - 273.15).round(rnd)
         
         temp = temperatures[int(self.target_h)][int(self.target_w)]
     
@@ -351,6 +360,13 @@ class ThermalCamera:
                     heatmap = cv2.applyColorMap(bgr, cv2.COLORMAP_RAINBOW)
                     heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
                     cmapText = 'Inv Rainbow'
+                    
+                # # Normalisiere die Temperaturen auf den Wertebereich 0-255
+                # normalized_temps = cv2.normalize(self.thdata, None, 0, 255, cv2.NORM_MINMAX)
+                
+                # # Wende eine Farbkarte an, z.B. Jet
+                # heatmap = cv2.applyColorMap(np.uint8(normalized_temps), cv2.COLORMAP_JET)
+
                 
                           
                 if (self.hud=='all') or (self.hud=='cross'):
@@ -634,5 +650,5 @@ def main():
         self.run()
 
 if __name__ == "__main__":
-    self = ThermalCamera(web=False, qt=False)
+    self = ThermalCamera(web=False, qt=True)
     self.run()
