@@ -82,9 +82,9 @@ class VersionCheck:
     def check_for_update(self):
         if version.parse(self.current_version) < version.parse(self.latest_version):
             self.needs_update = True
-            print(f'Eine neuere Version ({self.latest_version}) von topdon ist verfügbar! Bitte aktualisiere deine Installation.')
+            print(f'Eine neuere Version ({self.latest_version}) ist verfügbar! Bitte aktualisiere deine Installation.')
         else:
-            print(f'Deine topdon-Version ({self.current_version}) ist auf dem neuesten Stand.')
+            print(f'Deine Version ({self.current_version}) ist auf dem neuesten Stand.')
             
     def ensure_latest_version(self):
         if not self.checked:
@@ -671,11 +671,6 @@ p/ö/l/ä : Move target position up/down/left/right
         
 def main():
     import argparse
-    import requests
-    from packaging import version
-    import topdon
-    
-    checkVersion = VersionCheck()
     
     parser = argparse.ArgumentParser(description='Thermal Camera Viewer')
     
@@ -687,7 +682,7 @@ def main():
     args = parser.parse_args()
     
     if args.update:
-        checkVersion.ensure_latest_version()
+        VersionCheck().ensure_latest_version()
     else:
         self = ThermalCamera(**vars(args))
         self.run()
