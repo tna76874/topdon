@@ -44,6 +44,66 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 template_folder = os.path.join(current_dir, 'templates')
 static_folder = os.path.join(current_dir, 'static')
 
+class ThermalFrame:
+    def __init__(self, camera, frame, rnd = 2):
+        self.imdata, self.thdata = np.array_split(frame, 2)
+        self.rnd = rnd
+        self.camera=camera
+        self.height, self.width, _ = self.imdata.shape
+
+    def rotate(self, rotation):
+        self.imdata = cv2.rotate(self.imdata, rotation)
+        self.thdata = cv2.rotate(self.thdata, rotation)
+
+    def flip(self):
+        self.imdata = cv2.flip(self.imdata, 1)
+        self.thdata = cv2.flip(self.thdata, 1)
+
+    def _set_target(self,h,w):
+        self.target_h = int(h)
+        self.target_w = int(w)
+        self.target_temp = np.round(self.temperatures[self.target_h][self.target_w],self.rnd)
+
+    def _convert_raw_temp_data_to_kelvin_topdon(self, thdata):
+        """
+        thdata[..., 1] contains just some offset/calibration in the range about 300 K
+        thdata[..., 0] contains a little temp offset
+        ... /64 is equivalent to the bitshift operation >> 6. This way, the temperature is only encoded via integer numbers.
+        """
+        return (thdata[..., 0] + thdata[..., 1] * 256) / 64
+
+    def _get_celsius_temperatures(self):
+        return self._convert_raw_temp_data_to_kelvin_topdon(self.thdata) - 273.15
+
+    def _process_frame(self):
+        # converting kelvon to celsius
+        if self.camera['name'] == 'TC001':
+            self.temperatures = self._get_celsius_temperatures()
+        else:
+            raise Exception('Unknown camera')
+        
+    
+        self.maxtemp, self.mintemp, self.avgtemp = [np.round(k,self.rnd) for k in [self.temperatures.max(), self.temperatures.min(), self.temperatures.mean()]]
+
+    def _get_data(self, newWidth):
+        self.maxtemp_index = divmod(self.temperatures.argmax(), self.width)
+        self.mintemp_index = divmod(self.temperatures.argmin(), self.width)
+        
+        img_data = {
+                'avg_temp': self.avgtemp,
+                'max_temp': self.maxtemp,
+                'min_temp': self.mintemp,
+                'target_temp'    : self.target_temp,
+                'max_temp_x': int(self.maxtemp_index[0]*newWidth/self.width),
+                'max_temp_y': int(self.maxtemp_index[1]*newWidth/self.width),
+                'min_temp_x': int(self.mintemp_index[0]*newWidth/self.width),
+                'min_temp_y': int(self.mintemp_index[1]*newWidth/self.width),
+                'target_x': int(self.target_h*newWidth/self.width),
+                'target_y': int(self.target_w*newWidth/self.width),
+            }
+        return img_data
+
+
 class PhotoSnapshot:
     def __init__(self, camera, imdata, thdata):
         self.camera = camera.copy()
@@ -246,8 +306,7 @@ class ThermalCamera:
         _, buffer = cv2.imencode('.jpg', frame)
         self.app.current_frame = base64.b64encode(buffer).decode('utf-8')
         self.socket.emit('update_frame', {'current_frame': self.app.current_frame, 'image_width': self.newWidth, 'image_height': self.newHeight})
-
-        
+       
     def init_windows(self):
         if self.isqt:
             cv2.namedWindow('Thermal', cv2.WINDOW_GUI_NORMAL)
@@ -255,30 +314,6 @@ class ThermalCamera:
             
     def snapshot(self):       
         PhotoSnapshot(self.videostore.camera, self.heatmap, self.thdata)
-        
-    def _convert_raw_temp_data_to_kelvin(self, thdata):
-        """
-        thdata[..., 1] contains just some offset/calibration in the range about 300 K
-        thdata[..., 0] contains a little temp offset
-        ... /64 is equivalent to the bitshift operation >> 6. This way, the temperature is only encoded via integer numbers.
-        """
-        return (thdata[..., 0] + thdata[..., 1] * 256) / 64 
-    
-    def _process_frame(self, thdata, rnd = 2):
-        # converting kelvon to celsius
-        temperatures = (self._convert_raw_temp_data_to_kelvin(thdata) - 273.15).round(rnd)
-        
-        temp = temperatures[int(self.target_h)][int(self.target_w)]
-    
-        maxtemp, mintemp, avgtemp = [np.round(k,2) for k in [temperatures.max(), temperatures.min(), temperatures.mean()]]
-        
-        posmax = thdata[..., 1].argmax()
-        mcol, mrow = divmod(posmax, self.width)
-    
-        posmin = thdata[..., 1].argmin()
-        lcol, lrow = divmod(posmin, self.width)
-    
-        return temp, maxtemp, mintemp, avgtemp, mcol, mrow, lcol, lrow, temperatures
 
     def run(self):
         self.videostore.open()
@@ -289,35 +324,23 @@ class ThermalCamera:
         while self.cap.isOpened():
             ret, frame = self.cap.read()
             if ret == True:
-                imdata, thdata = np.array_split(frame, 2)
+                TFrame = ThermalFrame(self.videostore.camera, frame)
                 
                 if self.rotation!=None:
-                    imdata = cv2.rotate(imdata, self.rotation)
-                    thdata = cv2.rotate(thdata, self.rotation)
+                    TFrame.rotate(self.rotation)
                     
                 if self.flip:
-                    imdata = cv2.flip(imdata, 1)
-                    thdata = cv2.flip(thdata, 1)
-
-                   
-                temp, maxtemp, mintemp, avgtemp, mcol, mrow, lcol, lrow, temperatures = self._process_frame(thdata)
-                self.thdata = temperatures
+                    TFrame.flip(1)
+                    
+                TFrame._process_frame()
+                TFrame._set_target(self.target_h, self.target_w)
                 
-                img_data = {
-                                'avg_temperature': avgtemp,
-                                'max_temperature': maxtemp,
-                                'min_temperature': mintemp,
-                                'target_temp'    : temp,
-                                'max_position_col': mcol,
-                                'max_position_row': mrow,
-                                'min_position_col': lcol,
-                                'min_position_row': lrow,
-                                'target_position_col': self.target_h,
-                                'target_position_row': self.target_w,
-                            }
+                self.thdata = TFrame.temperatures
+                
+                img_data = TFrame._get_data(self.newWidth)
                           
                 # Convert the real image to RGB
-                bgr = cv2.cvtColor(imdata,  cv2.COLOR_YUV2BGR_YUYV)
+                bgr = cv2.cvtColor(TFrame.imdata,  cv2.COLOR_YUV2BGR_YUYV)
                 #Contrast
                 bgr = cv2.convertScaleAbs(bgr, alpha=self.alpha)#Contrast
                 #bicubic interpolate, upscale and blur
@@ -375,15 +398,15 @@ class ThermalCamera:
                     cv2.line(heatmap, (center[0] + 20, center[1]), (center[0] - 20, center[1]), (0, 0, 0), 1)  # hline
                     
                     # Temperatur anzeigen
-                    cv2.putText(heatmap, str(temp) + ' C', (center[0] + 10, center[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 2, cv2.LINE_AA)
-                    cv2.putText(heatmap, str(temp) + ' C', (center[0] + 10, center[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 255), 1, cv2.LINE_AA)
+                    cv2.putText(heatmap, str(img_data['target_temp']) + ' C', (center[0] + 10, center[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 2, cv2.LINE_AA)
+                    cv2.putText(heatmap, str(img_data['target_temp']) + ' C', (center[0] + 10, center[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 255), 1, cv2.LINE_AA)
 
                           
                 if self.hud=='all':
                     # display black box for our data
                     cv2.rectangle(heatmap, (0, 0),(160, 120), (0,0,0), -1)
                     # put text in the box
-                    cv2.putText(heatmap,'Avg Temp: '+str(avgtemp)+' C', (10, 14),\
+                    cv2.putText(heatmap,'Avg Temp: '+str(img_data['avg_temp'])+' C', (10, 14),\
                     cv2.FONT_HERSHEY_SIMPLEX, 0.4,(0, 255, 255), 1, cv2.LINE_AA)
                           
                     cv2.putText(heatmap,'Label Threshold: '+str(self.threshold)+' C', (10, 28),\
@@ -412,12 +435,12 @@ class ThermalCamera:
                     	cv2.putText(heatmap,'Recording: '+self.elapsed, (10, 112),\
                     	cv2.FONT_HERSHEY_SIMPLEX, 0.4,(40, 40, 255), 1, cv2.LINE_AA)
                 
-                if (self.hud!='none'):
-                    if maxtemp > avgtemp + self.threshold:
-                        self._draw_circle_text(heatmap, mrow, mcol, maxtemp, (0, 0, 255))
+                if (self.hud!='none'):                      
+                    if img_data['max_temp'] > img_data['avg_temp'] + self.threshold:
+                        self._draw_circle_text(heatmap, img_data['max_temp_y'], img_data['max_temp_x'], img_data['max_temp'], (0, 0, 255))
                     
-                    if mintemp < avgtemp - self.threshold:
-                        self._draw_circle_text(heatmap, lrow, lcol, mintemp, (255, 0, 0))
+                    if img_data['min_temp'] < img_data['avg_temp'] - self.threshold:
+                        self._draw_circle_text(heatmap, img_data['min_temp_y'], img_data['min_temp_x'], img_data['min_temp'], (255, 0, 0))
                 
                 #display image
                 self.heatmap = heatmap
@@ -537,9 +560,9 @@ class ThermalCamera:
                         break
         
     def _draw_circle_text(self, heatmap, row, col, temp, color):
-        cv2.circle(heatmap, (row * self.scale, col * self.scale), 5, (0, 0, 0), 2)
-        cv2.circle(heatmap, (row * self.scale, col * self.scale), 5, color, -1)
-        cv2.putText(heatmap, str(temp) + ' C', ((row * self.scale) + 10, (col * self.scale) + 5),
+        cv2.circle(heatmap, (row, col), 5, (0, 0, 0), 2)
+        cv2.circle(heatmap, (row, col), 5, color, -1)
+        cv2.putText(heatmap, str(temp) + ' C', (row + 10, col + 5),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 255), 1, cv2.LINE_AA)
                 
     def _flip_image(self):
@@ -645,5 +668,5 @@ def main():
         self.run()
 
 if __name__ == "__main__":
-    self = ThermalCamera(web=True, qt=False)
+    self = ThermalCamera(web=False, qt=False)
     self.run()
