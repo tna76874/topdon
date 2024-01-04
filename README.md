@@ -1,10 +1,5 @@
 # Topdon Web Viewer
 
-Python Software to use the Topdon TC001 Thermal Camera on Linux via a webserver. Source Code adapted from:
-
-- [https://github.com/leswright1977/PyThermalCamera](https://github.com/leswright1977/PyThermalCamera)
-- [https://github.com/LeoDJ/P2Pro-Viewer/blob/23887289d3841fdae25c3a11b8d3eed8cd778800/P2Pro/video.py](https://github.com/LeoDJ/P2Pro-Viewer/blob/23887289d3841fdae25c3a11b8d3eed8cd778800/P2Pro/video.py)
-
 Access local (or via network)  webinterface to control the Topdon thermal cam.
 
 https://github.com/tna76874/topdon/assets/47271687/af8a17ed-03f9-41e8-bd22-39dc8a3c6230
@@ -27,3 +22,9 @@ cd topdon
 conda env create -f environment.yml
 ```
 
+## Acknowledgements
+
+Python Software to use the Topdon TC001 Thermal Camera on Linux via a webserver. Source Code adapted from:
+
+- [https://github.com/leswright1977/PyThermalCamera](https://github.com/leswright1977/PyThermalCamera)
+- [https://github.com/LeoDJ/P2Pro-Viewer/blob/23887289d3841fdae25c3a11b8d3eed8cd778800/P2Pro/video.py](https://github.com/LeoDJ/P2Pro-Viewer/blob/23887289d3841fdae25c3a11b8d3eed8cd778800/P2Pro/video.py)

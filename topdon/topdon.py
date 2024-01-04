@@ -27,9 +27,6 @@ from flask import Flask, render_template, request, send_from_directory
 from flask_socketio import SocketIO
 from threading import Thread
 
-import requests
-from packaging import version
-
 import pyqrcode
 
 import logging
@@ -38,65 +35,14 @@ logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
 try:
     from topdon.video import *
-    import topdon
+    from topdon.updater import *
 except:
     from video import *
+    from updater import *
     
 current_dir = os.path.dirname(os.path.abspath(__file__))
 template_folder = os.path.join(current_dir, 'templates')
 static_folder = os.path.join(current_dir, 'static')
-
-class VersionCheck:
-    def __init__(self):
-        self.needs_update = False
-        self.checked = False
-        self.current_version = None
-        self.latest_version = None
-        self.run_update_checker()
-    
-    def run_update_checker(self):
-        self.current_version = topdon.__version__
-        self.latest_version = self.get_latest_version()
-        
-        try:
-            if self.latest_version!=None:
-                self.check_for_update()
-                self.checked = True
-            else:
-                print('Konnte die neueste Version nicht abrufen.')
-        except:
-            print('Error getting version.')
-
-
-    def get_latest_version(self):
-        url = 'https://raw.githubusercontent.com/tna76874/topdon/master/topdon/__init__.py'
-        response = requests.get(url)
-        if response.status_code == 200:
-            lines = response.text.split('\n')
-            for line in lines:
-                if line.startswith('__version__'):
-                    latest_version = line.split('=')[1].strip().strip("'").strip('"')
-                    return latest_version
-        return None
-    
-    def check_for_update(self):
-        if version.parse(self.current_version) < version.parse(self.latest_version):
-            self.needs_update = True
-            print(f'Eine neuere Version ({self.latest_version}) ist verfügbar! Bitte aktualisiere deine Installation.')
-        else:
-            print(f'Deine Version ({self.current_version}) ist auf dem neuesten Stand.')
-            
-    def ensure_latest_version(self):
-        if not self.checked:
-            self.run_update_checker()
-            
-        if self.needs_update:    
-            try:
-                subprocess.run(['pip3', 'install', '--upgrade', f'git+https://github.com/tna76874/topdon.git'])
-                print('topdon erfolgreich aktualisiert!')
-                exit()
-            except Exception as e:
-                print(f'Fehler bei der Aktualisierung von topdon: {e}')
 
 class PhotoSnapshot:
     def __init__(self, camera, imdata, thdata):
@@ -242,7 +188,7 @@ class ThermalCamera:
             return '127.0.0.1'
             
     def init_webapp(self):
-        app = Flask('Video Stream', template_folder=template_folder, static_folder=static_folder)
+        app = Flask('Thermal Camera Viewer', template_folder=template_folder, static_folder=static_folder)
         app.current_frame = None
     
         @app.route('/scripts/<script_name>')
@@ -674,10 +620,10 @@ def main():
     
     parser = argparse.ArgumentParser(description='Thermal Camera Viewer')
     
-    parser.add_argument('--qt', action='store_true', help='Starte die ThermalCamera mit QT Fenster')
-    parser.add_argument('--port', type=int, default=5001, help='Der Port für die Webunterstützung (Standard: 5001)')
-    parser.add_argument('--update', action='store_true', help='Aktualisiert topdon auf die neueste Version')
-    parser.add_argument('--version', action='version', version=f'Thermal Camera Viewer {topdon.__version__}', help='Zeigt die Versionsnummer von Topdon')
+    parser.add_argument('--qt', action='store_true', help='Start with QT window')
+    parser.add_argument('--port', type=int, default=5001, help='The port for web support (default: 5001)')
+    parser.add_argument('--update', action='store_true', help='Update to the latest version')
+    parser.add_argument('--version', action='version', version=f'Thermal Camera Viewer {topdon.__version__}', help='Show the version number of Thermal Camera Viewer')
 
     args = parser.parse_args()
     
