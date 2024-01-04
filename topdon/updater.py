@@ -5,6 +5,7 @@ updater modules
 """
 import requests
 from packaging import version
+import subprocess
 
 try:
     import topdon
