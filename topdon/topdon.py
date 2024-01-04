@@ -54,6 +54,7 @@ class ThermalFrame:
     def rotate(self, rotation):
         self.imdata = cv2.rotate(self.imdata, rotation)
         self.thdata = cv2.rotate(self.thdata, rotation)
+        self.height, self.width, _ = self.imdata.shape
 
     def flip(self):
         self.imdata = cv2.flip(self.imdata, 1)
