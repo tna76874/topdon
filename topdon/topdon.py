@@ -105,10 +105,11 @@ class ThermalFrame:
 
 
 class PhotoSnapshot:
-    def __init__(self, camera, imdata, thdata):
+    def __init__(self, camera, imdata, temperatures, img_data):
         self.camera = camera.copy()
         self.imdata = imdata
-        self.thdata = thdata
+        self.thdata = temperatures
+        self.data = img_data
         self.init_t = datetime.now()
         
         self.save_to_xlsx()
@@ -119,10 +120,16 @@ class PhotoSnapshot:
     
     def save_to_xlsx(self):
         xlsx_file = f'{self.camera["name"]}_{self._time_str()}.xlsx'
-        DF_data = pd.DataFrame(self.thdata)
-        DF_data.index += 1
-        DF_data.columns += 1
-        DF_data.to_excel(xlsx_file, index=True)
+        DF_temp = pd.DataFrame(self.thdata)
+        DF_temp.index += 1
+        DF_temp.columns += 1
+        
+        DF_data = pd.DataFrame([self.data])
+        
+        with pd.ExcelWriter(xlsx_file, engine='xlsxwriter') as writer:
+            DF_data.to_excel(writer, sheet_name='Data', index=False)
+            DF_temp.to_excel(writer, sheet_name='Temperatures', index=True)
+
         
     def save_image(self):
         cv2.imwrite(f'{self.camera["name"]}_{self._time_str()}.png', self.imdata)
@@ -313,7 +320,7 @@ class ThermalCamera:
             cv2.resizeWindow('Thermal', self.newWidth, self.newHeight)
             
     def snapshot(self):       
-        PhotoSnapshot(self.videostore.camera, self.heatmap, self.thdata)
+        PhotoSnapshot(self.videostore.camera, self.heatmap, self.thdata, self.img_data)
 
     def run(self):
         self.videostore.open()
@@ -324,23 +331,23 @@ class ThermalCamera:
         while self.cap.isOpened():
             ret, frame = self.cap.read()
             if ret == True:
-                TFrame = ThermalFrame(self.videostore.camera, frame)
+                self.TFrame = ThermalFrame(self.videostore.camera, frame)
                 
                 if self.rotation!=None:
-                    TFrame.rotate(self.rotation)
+                    self.TFrame.rotate(self.rotation)
                     
                 if self.flip:
-                    TFrame.flip(1)
+                    self.TFrame.flip(1)
                     
-                TFrame._process_frame()
-                TFrame._set_target(self.target_h, self.target_w)
+                self.TFrame._process_frame()
+                self.TFrame._set_target(self.target_h, self.target_w)
                 
-                self.thdata = TFrame.temperatures
+                self.thdata = self.TFrame.temperatures
                 
-                img_data = TFrame._get_data(self.newWidth)
+                self.img_data = self.TFrame._get_data(self.newWidth)
                           
                 # Convert the real image to RGB
-                bgr = cv2.cvtColor(TFrame.imdata,  cv2.COLOR_YUV2BGR_YUYV)
+                bgr = cv2.cvtColor(self.TFrame.imdata,  cv2.COLOR_YUV2BGR_YUYV)
                 #Contrast
                 bgr = cv2.convertScaleAbs(bgr, alpha=self.alpha)#Contrast
                 #bicubic interpolate, upscale and blur
@@ -398,15 +405,15 @@ class ThermalCamera:
                     cv2.line(heatmap, (center[0] + 20, center[1]), (center[0] - 20, center[1]), (0, 0, 0), 1)  # hline
                     
                     # Temperatur anzeigen
-                    cv2.putText(heatmap, str(img_data['target_temp']) + ' C', (center[0] + 10, center[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 2, cv2.LINE_AA)
-                    cv2.putText(heatmap, str(img_data['target_temp']) + ' C', (center[0] + 10, center[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 255), 1, cv2.LINE_AA)
+                    cv2.putText(heatmap, str(self.img_data['target_temp']) + ' C', (center[0] + 10, center[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 2, cv2.LINE_AA)
+                    cv2.putText(heatmap, str(self.img_data['target_temp']) + ' C', (center[0] + 10, center[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 255), 1, cv2.LINE_AA)
 
                           
                 if self.hud=='all':
                     # display black box for our data
                     cv2.rectangle(heatmap, (0, 0),(160, 120), (0,0,0), -1)
                     # put text in the box
-                    cv2.putText(heatmap,'Avg Temp: '+str(img_data['avg_temp'])+' C', (10, 14),\
+                    cv2.putText(heatmap,'Avg Temp: '+str(self.img_data['avg_temp'])+' C', (10, 14),\
                     cv2.FONT_HERSHEY_SIMPLEX, 0.4,(0, 255, 255), 1, cv2.LINE_AA)
                           
                     cv2.putText(heatmap,'Label Threshold: '+str(self.threshold)+' C', (10, 28),\
@@ -436,11 +443,11 @@ class ThermalCamera:
                     	cv2.FONT_HERSHEY_SIMPLEX, 0.4,(40, 40, 255), 1, cv2.LINE_AA)
                 
                 if (self.hud!='none'):                      
-                    if img_data['max_temp'] > img_data['avg_temp'] + self.threshold:
-                        self._draw_circle_text(heatmap, img_data['max_temp_y'], img_data['max_temp_x'], img_data['max_temp'], (0, 0, 255))
+                    if self.img_data['max_temp'] > self.img_data['avg_temp'] + self.threshold:
+                        self._draw_circle_text(heatmap, self.img_data['max_temp_y'], self.img_data['max_temp_x'], self.img_data['max_temp'], (0, 0, 255))
                     
-                    if img_data['min_temp'] < img_data['avg_temp'] - self.threshold:
-                        self._draw_circle_text(heatmap, img_data['min_temp_y'], img_data['min_temp_x'], img_data['min_temp'], (255, 0, 0))
+                    if self.img_data['min_temp'] < self.img_data['avg_temp'] - self.threshold:
+                        self._draw_circle_text(heatmap, self.img_data['min_temp_y'], self.img_data['min_temp_x'], self.img_data['min_temp'], (255, 0, 0))
                 
                 #display image
                 self.heatmap = heatmap
@@ -453,7 +460,7 @@ class ThermalCamera:
                     self.elapsed = (time.time() - self.start)
                     self.elapsed = time.strftime("%H:%M:%S", time.gmtime(self.elapsed)) 
                     try:
-                        self.videoOut.add_frame(heatmap, data = img_data)
+                        self.videoOut.add_frame(heatmap, data = self.img_data)
                     except:
                         self.recording = False
                         
@@ -668,5 +675,5 @@ def main():
         self.run()
 
 if __name__ == "__main__":
-    self = ThermalCamera(web=False, qt=False)
+    self = ThermalCamera(web=False, qt=True)
     self.run()

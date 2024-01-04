@@ -24,6 +24,7 @@ setup(
 	"pyqrcode",
 	"pandas",
 	"openpyxl",
+	"xlsxwriter",
     ],
     package_data={
         'topdon': ['video.py'],
