@@ -31,6 +31,8 @@ import pyqrcode
 
 import logging
 
+from quickflare.quickflare import CloudflaredManager
+
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
 try:
@@ -179,6 +181,7 @@ class ThermalCamera:
                             'web': True,
                             'port' : 5001,
                             'qt' : False,
+                            'cf' : False,
                             }
         self.config.update(kwargs)
         self.videostore = Video()
@@ -231,15 +234,29 @@ class ThermalCamera:
         self.heatmap = None
         self.thdata = None
         if self.web == True:
+
+            if (self.config['cf'] == True):
+                self._init_cloudflared()
+                
             self.init_webapp()
             self.video_thread = Thread(target=lambda: self.app.run(debug=False, port=self.config['port'], threaded=True, host='0.0.0.0', use_reloader=False))
             self.video_thread.start()
             ip_adress = self.get_ip_address()
-            url = f'http://{ip_adress}:{self.config["port"]}'
+            if (self.config['cf'] == True):
+                url = self.cf.tunnel_url
+            else:
+                url = f'http://{ip_adress}:{self.config["port"]}'
+
             url_qr = pyqrcode.create(url).terminal(module_color='white', background='black')
             print(f'############################\n\nOpen: {url}\n{url_qr}\n\n############################')
             print('\n\n ---> CTRL+C to quit')
             self.open_port()
+            
+
+            
+    def _init_cloudflared(self):
+        self.cf = CloudflaredManager(port=self.config['port'])
+        self.cf.start(info=True)
             
     def set_target_pos(self):
         self.target = (int(self.newWidth * self.target_w / self.width), int(self.newHeight* self.target_h / self.height))
@@ -664,6 +681,7 @@ def main():
     
     parser.add_argument('--qt', action='store_true', help='Start with QT window')
     parser.add_argument('--port', type=int, default=5001, help='The port for web support (default: 5001)')
+    parser.add_argument('--cf', action='store_true', help='Start cloudflared tunnel')
     parser.add_argument('--update', action='store_true', help='Update to the latest version')
     parser.add_argument('--version', action='version', version=f'Thermal Camera Viewer {topdon.__version__}', help='Show the version number of Thermal Camera Viewer')
 

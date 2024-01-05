@@ -68,7 +68,7 @@
             videoFrame.style.maxHeight = `calc(100vh - ${toolbarHeight}px)`;
         });
 
-        var socket = io.connect('http://' + document.domain + ':' + location.port);
+        var socket = io.connect(window.location.protocol + '//'  + document.domain + ':' + location.port);
 
         socket.on('update_frame', function(data) {
             document.getElementById('videoFrame').src = 'data:image/jpeg;base64,' + data.current_frame;
