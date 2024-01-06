@@ -233,6 +233,8 @@ class ThermalCamera:
         
         self.heatmap = None
         self.thdata = None
+        self.temp_unit = " C"
+
         if self.web == True:
 
             if (self.config['cf'] == True):
@@ -240,6 +242,7 @@ class ThermalCamera:
                 
             self.init_webapp()
             self.video_thread = Thread(target=lambda: self.app.run(debug=False, port=self.config['port'], threaded=True, host='0.0.0.0', use_reloader=False))
+            self.video_thread.setDaemon(True)
             self.video_thread.start()
             ip_adress = self.get_ip_address()
             if (self.config['cf'] == True):
@@ -251,8 +254,6 @@ class ThermalCamera:
             print(f'############################\n\nOpen: {url}\n{url_qr}\n\n############################')
             print('\n\n ---> CTRL+C to quit')
             self.open_port()
-            
-
             
     def _init_cloudflared(self):
         self.cf = CloudflaredManager(port=self.config['port'])
@@ -339,8 +340,15 @@ class ThermalCamera:
             
     def snapshot(self):       
         PhotoSnapshot(self.videostore.camera, self.heatmap, self.thdata, self.img_data)
-
+        
     def run(self):
+        try:
+            self._run()
+        except KeyboardInterrupt:
+            print("Exiting . . .")
+            sys.exit(0)
+
+    def _run(self):
         self.videostore.open()
         self.cap = self.videostore.cap
 
@@ -423,18 +431,18 @@ class ThermalCamera:
                     cv2.line(heatmap, (center[0] + 20, center[1]), (center[0] - 20, center[1]), (0, 0, 0), 1)  # hline
                     
                     # Temperatur anzeigen
-                    cv2.putText(heatmap, str(self.img_data['target_temp']) + ' C', (center[0] + 10, center[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 2, cv2.LINE_AA)
-                    cv2.putText(heatmap, str(self.img_data['target_temp']) + ' C', (center[0] + 10, center[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 255), 1, cv2.LINE_AA)
+                    cv2.putText(heatmap, str(self.img_data['target_temp']) + self.temp_unit, (center[0] + 10, center[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 2, cv2.LINE_AA)
+                    cv2.putText(heatmap, str(self.img_data['target_temp']) + self.temp_unit, (center[0] + 10, center[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 255), 1, cv2.LINE_AA)
 
                           
                 if self.hud=='all':
                     # display black box for our data
                     cv2.rectangle(heatmap, (0, 0),(160, 120), (0,0,0), -1)
                     # put text in the box
-                    cv2.putText(heatmap,'Avg Temp: '+str(self.img_data['avg_temp'])+' C', (10, 14),\
+                    cv2.putText(heatmap,'Avg Temp: '+str(self.img_data['avg_temp'])+self.temp_unit, (10, 14),\
                     cv2.FONT_HERSHEY_SIMPLEX, 0.4,(0, 255, 255), 1, cv2.LINE_AA)
                           
-                    cv2.putText(heatmap,'Label Threshold: '+str(self.threshold)+' C', (10, 28),\
+                    cv2.putText(heatmap,'Label Threshold: '+str(self.threshold)+self.temp_unit, (10, 28),\
                     cv2.FONT_HERSHEY_SIMPLEX, 0.4,(0, 255, 255), 1, cv2.LINE_AA)
                           
                     cv2.putText(heatmap,'Colormap: '+cmapText, (10, 42),\
@@ -579,15 +587,18 @@ class ThermalCamera:
                             self.set_target_pos()
                               
                     if keyPress == ord('q'):
-                        self.cap.release()
-                        cv2.destroyAllWindows()
-                        self.__del__()
+                        self._exit_capture_loop()
                         break
+                    
+    def _exit_capture_loop(self):
+        self.cap.release()
+        cv2.destroyAllWindows()
+        self.__del__()        
         
     def _draw_circle_text(self, heatmap, row, col, temp, color):
         cv2.circle(heatmap, (row, col), 5, (0, 0, 0), 2)
         cv2.circle(heatmap, (row, col), 5, color, -1)
-        cv2.putText(heatmap, str(temp) + ' C', (row + 10, col + 5),
+        cv2.putText(heatmap, str(temp) + self.temp_unit, (row + 10, col + 5),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 255), 1, cv2.LINE_AA)
                 
     def _flip_image(self):
