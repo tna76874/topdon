@@ -355,7 +355,7 @@ class ThermalCamera:
                     self.TFrame.rotate(self.rotation)
                     
                 if self.flip:
-                    self.TFrame.flip(1)
+                    self.TFrame.flip()
                     
                 self.TFrame._process_frame()
                 self.TFrame._set_target(self.target_h, self.target_w)
@@ -694,5 +694,5 @@ def main():
         self.run()
 
 if __name__ == "__main__":
-    self = ThermalCamera(web=False, qt=True)
+    self = ThermalCamera(web=True, qt=False)
     self.run()
