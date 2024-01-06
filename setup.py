@@ -24,7 +24,7 @@ setup(
     	"pyqrcode",
     	"pandas",
     	"openpyxl",
-        "quickflare @ git+https://github.com/tna76874/quickflare.git@2ec3db12fd21197ac650128aeb9d258640b71e54",
+        "quickflare @ git+https://github.com/tna76874/quickflare.git@ed55c9ec8d45b8e813777e16446e4eb1d97cba8d",
     ],
     package_data={
         'topdon': ['video.py'],

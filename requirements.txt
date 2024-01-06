@@ -7,4 +7,4 @@ pyqrcode==1.2.1
 pandas==2.1.4
 openpyxl==3.1.2
 xlsxwriter==3.1.9
-git+https://github.com/tna76874/quickflare.git@2ec3db12fd21197ac650128aeb9d258640b71e54
+git+https://github.com/tna76874/quickflare.git@ed55c9ec8d45b8e813777e16446e4eb1d97cba8d
