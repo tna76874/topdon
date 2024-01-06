@@ -240,6 +240,11 @@ class ThermalCamera:
             if (self.config['cf'] == True):
                 self._init_cloudflared()
                 
+            # set websocket framerate for cloudflared
+            self.target_fps = 10
+            self.update_interval_seconds = 1 / self.target_fps
+            self.last_update_time = datetime.now()
+                
             self.init_webapp()
             self.video_thread = Thread(target=lambda: self.app.run(debug=False, port=self.config['port'], threaded=True, host='0.0.0.0', use_reloader=False))
             self.video_thread.setDaemon(True)
@@ -328,11 +333,22 @@ class ThermalCamera:
         self.app = app
         self.socket = SocketIO(self.app)
 
-    def update_web_frame(self, frame):
-        _, buffer = cv2.imencode('.jpg', frame)
-        self.app.current_frame = base64.b64encode(buffer).decode('utf-8')
-        self.socket.emit('update_frame', {'current_frame': self.app.current_frame, 'image_width': self.newWidth, 'image_height': self.newHeight})
-       
+    def update_web_frame(self, frame, quality=50):
+        current_time = datetime.now()
+        time_difference = current_time - self.last_update_time
+        
+        if self.config['cf'] == True:
+            if time_difference.total_seconds() >= self.update_interval_seconds:
+                _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, quality])
+                self.app.current_frame = base64.b64encode(buffer).decode('utf-8')
+                self.socket.emit('update_frame', {'current_frame': self.app.current_frame, 'image_width': self.newWidth, 'image_height': self.newHeight})
+                self.last_update_time = current_time
+        else:
+            _, buffer = cv2.imencode('.jpg', frame)
+            self.app.current_frame = base64.b64encode(buffer).decode('utf-8')
+            self.socket.emit('update_frame', {'current_frame': self.app.current_frame, 'image_width': self.newWidth, 'image_height': self.newHeight})
+
+
     def init_windows(self):
         if self.isqt:
             cv2.namedWindow('Thermal', cv2.WINDOW_GUI_NORMAL)
