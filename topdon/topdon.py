@@ -499,7 +499,10 @@ class ThermalCamera:
                     self.update_web_frame(heatmap)
                           
                 if self.recording == True:
-                    self.elapsed = (time.time() - self.start)
+                    try:
+                        self.elapsed = (time.time() - self.start)
+                    except:
+                        self.elapsed = (time.time() - time.time())
                     self.elapsed = time.strftime("%H:%M:%S", time.gmtime(self.elapsed)) 
                     try:
                         self.videoOut.add_frame(heatmap, data = self.img_data)
