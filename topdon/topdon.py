@@ -182,6 +182,7 @@ class ThermalCamera:
                             'port' : 5001,
                             'qt' : False,
                             'cf' : False,
+                            'compress' : True,
                             }
         self.config.update(kwargs)
         self.videostore = Video()
@@ -337,7 +338,7 @@ class ThermalCamera:
         current_time = datetime.now()
         time_difference = current_time - self.last_update_time
         
-        if self.config['cf'] == True:
+        if self.config['compress'] == True:
             if time_difference.total_seconds() >= self.update_interval_seconds:
                 _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, quality])
                 self.app.current_frame = base64.b64encode(buffer).decode('utf-8')
