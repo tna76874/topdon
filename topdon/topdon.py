@@ -183,6 +183,7 @@ class ThermalCamera:
                             'qt' : False,
                             'cf' : False,
                             'compress' : True,
+                            'camera' : -1,
                             }
         self.config.update(kwargs)
         self.videostore = Video()
@@ -366,7 +367,7 @@ class ThermalCamera:
             sys.exit(0)
 
     def _run(self):
-        self.videostore.open()
+        self.videostore.open(camera_id=self.config['camera'])
         self.cap = self.videostore.cap
 
         self.init_windows()
@@ -715,6 +716,7 @@ def main():
     parser.add_argument('--cf', action='store_true', help='Start cloudflared tunnel')
     parser.add_argument('--update', action='store_true', help='Update to the latest version')
     parser.add_argument('--version', action='version', version=f'Thermal Camera Viewer {topdon.__version__}', help='Show the version number of Thermal Camera Viewer')
+    parser.add_argument('--camera', type=int, default=-1, help='Specify the camera (default: -1)')
 
     args = parser.parse_args()
     

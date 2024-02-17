@@ -11,6 +11,7 @@ https://github.com/tna76874/topdon/assets/47271687/6ee63fcc-4ae0-420e-a82a-20a28
 #### Installation
 
 ```bash
+sudo apt-get install libgl1
 pip3 install --upgrade git+https://github.com/tna76874/topdon.git
 ```
 
