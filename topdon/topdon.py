@@ -636,19 +636,24 @@ class ThermalCamera:
         self.init_windows()
     
     def _cycle_hud(self):
-        self.hud = next(self.hud_options)            
-    
+        self.hud = next(self.hud_options)    
+
     def _toggle_recording(self):
         self.recording = next(self.recording_options)
 
         if self.recording == True:
-            self.videoOut = VideoRecorder(self.videostore.camera, self.newWidth, self.newHeight)
-            self.start = time.time()
+            self._recording_start()
         else:
-            self.elapsed = "00:00:00"
-            del self.videoOut
+            self._recording_stop()
 
-                    
+    def _recording_start(self):
+        self.videoOut = VideoRecorder(self.videostore.camera, self.newWidth, self.newHeight)
+        self.start = time.time()
+
+    def _recording_stop(self):
+        self.elapsed = "00:00:00"
+        del self.videoOut
+                        
     def __del__(self):
         if hasattr(self, 'cap') and self.cap.isOpened():
             self.cap.release()
