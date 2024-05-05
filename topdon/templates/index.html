@@ -66,6 +66,8 @@
             const toolbarHeight = toolbar.offsetHeight;
             const videoFrame = document.getElementById('videoFrame');
             videoFrame.style.maxHeight = `calc(100vh - ${toolbarHeight}px)`;
+
+            updateRecordButtonLabel();
         });
 
         var socket = io.connect(window.location.protocol + '//'  + document.domain + ':' + location.port);
@@ -79,16 +81,30 @@
 
         function toggleRecording() {
             recording = !recording;
-            updateRecordButtonLabel();
             sendAjaxRequest("/toggle_recording");
+            updateRecordButtonLabel();
         }
 
         function updateRecordButtonLabel() {
             var recordButton = document.getElementById('recordButton');
-            var iconColor = recording ? 'red' : 'black';
-            var textColor = recording ? 'red' : 'black';
 
-            recordButton.innerHTML = `<i class="fa-solid fa-video" style="color: ${iconColor};"></i> <span style="color: ${textColor};"> ${recording ? 'Stop' : 'Start'} Recording</span>`;
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/is_recording', true);
+
+            xhr.onload = function() {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    var response = JSON.parse(xhr.responseText);
+                    var recording = response.recording;
+                    var iconColor = recording ? 'red' : 'black';
+                    var textColor = recording ? 'red' : 'black';
+
+                    recordButton.innerHTML = `<i class="fa-solid fa-video" style="color: ${iconColor};"></i> <span style="color: ${textColor};"> ${recording ? 'Stop' : 'Start'} Recording</span>`;
+                } else {
+                    console.error('Failed to fetch recording status');
+                }
+            };
+
+            xhr.send();
         }
 
 
