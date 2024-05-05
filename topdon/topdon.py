@@ -151,8 +151,8 @@ class VideoRecorder:
         return self.init_t.strftime("%Y%m%d-%H%M%S")
 
     def _initialize_video_out(self):
-        file_name = f'{self.camera["name"]}_{self._time_str()}.avi'
-        video_out = cv2.VideoWriter(file_name, cv2.VideoWriter_fourcc(*'XVID'), 25, (self.width, self.height))
+        file_name = f'{self.camera["name"]}_{self._time_str()}.mp4'
+        video_out = cv2.VideoWriter(file_name, cv2.VideoWriter_fourcc(*'mp4v'), 25, (self.width, self.height))
         return video_out
 
     def add_frame(self, frame, data=None):
