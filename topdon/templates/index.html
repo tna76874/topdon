@@ -23,6 +23,7 @@
         display: block;
     }
     .tab-buttons {
+        display: flex;
         margin-bottom: 10px;
     }
     .tab-button {
@@ -34,8 +35,11 @@
     }
     .tab-button.active {
         background-color: #ddd;
+        color: #000;
+        font-weight: bold;
+        border-bottom: 3px solid #007bff;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
     }
-
     .file-item {
         display: flex;
         justify-content: space-between;
@@ -74,7 +78,7 @@
 <body>
     <div class="tab-buttons">
         <div class="tab-button active" onclick="showTab('videoTab')">Video</div>
-        <div class="tab-button" onclick="showTab('fileListTab')">Dateiliste</div>
+        <div class="tab-button" onclick="showTab('fileListTab')">gespeicherte Dateien</div>
     </div>
     <div id="videoTab" class="tab active">
     <div id="toolbar">
