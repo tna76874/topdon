@@ -23,7 +23,7 @@ import sys
 import socket
 from itertools import cycle
 
-from flask import Flask, render_template, request, send_from_directory, jsonify
+from flask import Flask, render_template, request, send_from_directory, jsonify, send_file
 from flask_socketio import SocketIO
 from threading import Thread
 
@@ -38,9 +38,11 @@ logging.getLogger('werkzeug').setLevel(logging.ERROR)
 try:
     from topdon.video import *
     from topdon.updater import *
+    from topdon.files import *
 except:
     from video import *
     from updater import *
+    from files import *
     
 current_dir = os.path.dirname(os.path.abspath(__file__))
 template_folder = os.path.join(current_dir, 'templates')
@@ -184,10 +186,12 @@ class ThermalCamera:
                             'cf' : False,
                             'compress' : True,
                             'camera' : -1,
+                            'media' : os.getcwd(),
                             }
         self.config.update(kwargs)
         self.videostore = Video()
         self.web = self.config['web']
+        
         self.width = 256  # Sensor width
         self.height = 192  # sensor height
         
@@ -262,6 +266,12 @@ class ThermalCamera:
             print('\n\n ---> CTRL+C to quit')
             self.open_port()
             
+        self.files = None
+        
+    def _init_files(self):
+        if self.files==None:
+            self.files = FileManager(base_path=self.config["media"], slug=self.videostore.camera["name"])
+            
     def _init_cloudflared(self):
         self.cf = CloudflaredManager(port=self.config['port'])
         self.cf.start(info=True)
@@ -325,6 +335,32 @@ class ThermalCamera:
             self._flip_image()
             return ''
         
+        @app.route('/get_file_list', methods=['GET'])
+        def get_file_list():
+            return jsonify([k.web_data() for k in self.files.get_files()])
+
+        @app.route('/download_file/<filename>', methods=['GET'])
+        def download_file(filename):
+            fileInfo = self.files.get_file(filename)
+            
+            if fileInfo==None:
+                return jsonify({"error": "File not found"}), 404
+            
+            return send_file(fileInfo.data().get('path'), as_attachment=True)
+
+        @app.route('/delete_file/<filename>', methods=['DELETE'])
+        def delete_file(filename):
+            fileInfo = self.files.get_file(filename)
+            
+            if fileInfo is None:
+                return jsonify({"error": "File not found"}), 404
+
+            try:
+                fileInfo.delete()
+                return jsonify({"message": "File deleted successfully"}), 200
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500
+        
         @app.route('/send_coordinates')
         def send_coordinates():
             y = float(request.args.get('x'))
@@ -376,6 +412,7 @@ class ThermalCamera:
 
         self.init_windows()
         if self.isqt: self.print_thermal_camera_info()
+        self._init_files()
         while self.cap.isOpened():
             ret, frame = self.cap.read()
             if ret == True:
@@ -726,6 +763,8 @@ def main():
     parser.add_argument('--update', action='store_true', help='Update to the latest version')
     parser.add_argument('--version', action='version', version=f'Thermal Camera Viewer {topdon.__version__}', help='Show the version number of Thermal Camera Viewer')
     parser.add_argument('--camera', type=int, default=-1, help='Specify the camera (default: -1)')
+    parser.add_argument('--media', type=str, help='Specify the path to the media folder')
+
 
     args = parser.parse_args()
     

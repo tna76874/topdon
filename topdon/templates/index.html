@@ -16,6 +16,31 @@
         display: flex;
         flex-direction: column;
     }
+    .tab {
+        display: none;
+    }
+    .tab.active {
+        display: block;
+    }
+    .tab-buttons {
+        margin-bottom: 10px;
+    }
+    .tab-button {
+        padding: 10px;
+        cursor: pointer;
+        border: 1px solid #ccc;
+        background-color: #f1f1f1;
+        margin-right: 5px;
+    }
+    .tab-button.active {
+        background-color: #ddd;
+    }
+
+    .file-item {
+        display: flex;
+        justify-content: space-between;
+        margin: 5px 0;
+    }
 
     #toolbar {
         display: flex;
@@ -47,6 +72,11 @@
     }
 </style>
 <body>
+    <div class="tab-buttons">
+        <div class="tab-button active" onclick="showTab('videoTab')">Video</div>
+        <div class="tab-button" onclick="showTab('fileListTab')">Dateiliste</div>
+    </div>
+    <div id="videoTab" class="tab active">
     <div id="toolbar">
         <button onclick="cycleHud()"><i class="fa-solid fa-chart-simple"></i> Cycle Hud</button>
         <button onclick="rotateImage()"><i class="fa-solid fa-rotate"></i> Rotate Image</button>
@@ -56,6 +86,14 @@
     </div>
     <div id="videoContainer">
         <img id="videoFrame">
+    </div>
+    </div>
+
+    <div id="fileListTab" class="tab">
+        <!-- <button onclick="getFileList()">Dateiliste abrufen</button> -->
+        <div id="fileListContainer">
+            <!-- Hier wird die Dateiliste angezeigt -->
+        </div>
     </div>
 
     <script src="scripts/socket.io.js"></script>
@@ -69,6 +107,31 @@
 
             updateRecordButtonLabel();
         });
+
+        function showTab(tabId) {
+            // Alle Tabs ausblenden
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Alle Tab-Buttons zurücksetzen
+            const buttons = document.querySelectorAll('.tab-button');
+            buttons.forEach(button => {
+                button.classList.remove('active');
+            });
+
+            // Den ausgewählten Tab anzeigen
+            document.getElementById(tabId).classList.add('active');
+
+            // Den aktiven Button hervorheben
+            const activeButton = Array.from(buttons).find(button => button.textContent.trim() === tabId.replace('Tab', ''));
+            if (activeButton) {
+                activeButton.classList.add('active');
+            }
+
+            getFileList()
+        }
 
         var socket = io.connect(window.location.protocol + '//'  + document.domain + ':' + location.port);
 
@@ -126,6 +189,89 @@
 
         function rotateImage() {
             sendAjaxRequest("/rotate_image");
+        }
+
+        function getFileList() {
+            sendAjaxRequestWithResponse("/get_file_list");
+        }
+
+        function sendAjaxRequestWithResponse(url) {
+            const xhr = new XMLHttpRequest();
+            xhr.open("GET", url, true);
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    const response = JSON.parse(xhr.responseText);
+                    displayFileList(response);
+                }
+            };
+            xhr.send();
+        }
+
+        function displayFileList(fileList) {
+            const fileListContainer = document.getElementById('fileListContainer');
+            fileListContainer.innerHTML = '';
+
+            fileList.forEach(file => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+
+                const fileName = document.createElement('span');
+                fileName.textContent = `${file.name}.${file.ending}`;
+
+                const downloadButton = document.createElement('button');
+                downloadButton.textContent = 'Download';
+                downloadButton.onclick = function() {
+                    downloadFile(file.filename);
+                };
+
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Löschen';
+                deleteButton.onclick = function() {
+                    if (confirm(`Möchten Sie die Datei "${file.filename}" wirklich löschen?`)) {
+                        deleteFile(file.filename);
+                    }
+                };
+
+                fileItem.appendChild(fileName);
+                fileItem.appendChild(downloadButton);
+                fileItem.appendChild(deleteButton);
+                fileListContainer.appendChild(fileItem);
+            });
+        }
+
+
+        function downloadFile(filename) {
+            const xhr = new XMLHttpRequest();
+            xhr.open("GET", `/download_file/${encodeURIComponent(filename)}`, true);
+            xhr.responseType = 'blob';
+            xhr.onload = function () {
+                if (xhr.status === 200) {
+                    const blob = new Blob([xhr.response], { type: xhr.getResponseHeader('Content-Type') });
+                    const link = document.createElement('a');
+                    link.href = window.URL.createObjectURL(blob);
+                    link.download = filename;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                } else {
+                    console.error('Download fehlgeschlagen:', xhr.statusText);
+                }
+            };
+            xhr.send();
+        }
+
+        function deleteFile(filename) {
+            const xhr = new XMLHttpRequest();
+            xhr.open("DELETE", `/delete_file/${encodeURIComponent(filename)}`, true);
+            xhr.onload = function () {
+                if (xhr.status === 200) {
+                    console.log('Datei erfolgreich gelöscht:', filename);
+                    getFileList();
+                } else {
+                    console.error('Fehler beim Löschen der Datei:', xhr.statusText);
+                }
+            };
+            xhr.send();
         }
 
         function sendAjaxRequest(url) {
