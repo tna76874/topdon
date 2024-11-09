@@ -110,7 +110,11 @@ class ThermalFrame:
 
 
 class PhotoSnapshot:
-    def __init__(self, camera, imdata, temperatures, img_data):
+    def __init__(self, camera, imdata, temperatures, img_data, savedir = None):
+        self.savedir = savedir
+        if savedir==None:
+            self.savedir = os.getcwd()
+            
         self.camera = camera.copy()
         self.imdata = imdata
         self.thdata = temperatures
@@ -124,7 +128,7 @@ class PhotoSnapshot:
         return self.init_t.strftime("%Y%m%d-%H%M%S")
     
     def save_to_xlsx(self):
-        xlsx_file = f'{self.camera["name"]}_{self._time_str()}.xlsx'
+        xlsx_file = os.path.join(self.savedir,f'{self.camera["name"]}_{self._time_str()}.xlsx')
         DF_temp = pd.DataFrame(self.thdata)
         DF_temp.index += 1
         DF_temp.columns += 1
@@ -137,10 +141,14 @@ class PhotoSnapshot:
 
         
     def save_image(self):
-        cv2.imwrite(f'{self.camera["name"]}_{self._time_str()}.png', self.imdata)
+        cv2.imwrite(os.path.join(self.savedir,f'{self.camera["name"]}_{self._time_str()}.png'), self.imdata)
     
 class VideoRecorder:
-    def __init__(self, camera, width, height):
+    def __init__(self, camera, width, height, savedir = None):
+        self.savedir = savedir
+        if savedir==None:
+            self.savedir = os.getcwd()
+        
         self.camera = camera.copy()
         self.width = width
         self.height = height
@@ -153,7 +161,7 @@ class VideoRecorder:
         return self.init_t.strftime("%Y%m%d-%H%M%S")
 
     def _initialize_video_out(self):
-        file_name = f'{self.camera["name"]}_{self._time_str()}.mp4'
+        file_name = os.path.join(self.savedir,f'{self.camera["name"]}_{self._time_str()}.mp4')
         video_out = cv2.VideoWriter(file_name, cv2.VideoWriter_fourcc(*'mp4v'), 25, (self.width, self.height))
         return video_out
 
@@ -165,7 +173,7 @@ class VideoRecorder:
             self.data.append(update_data)
         
     def save_to_xlsx(self):
-        xlsx_file = f'{self.camera["name"]}_{self._time_str()}.xlsx'
+        xlsx_file = os.path.join(self.savedir,f'{self.camera["name"]}_{self._time_str()}.xlsx')
         DF_data = pd.DataFrame(self.data)
         DF_data.to_excel(xlsx_file, index=False)
 
@@ -397,7 +405,7 @@ class ThermalCamera:
             cv2.resizeWindow('Thermal', self.newWidth, self.newHeight)
             
     def snapshot(self):       
-        PhotoSnapshot(self.videostore.camera, self.heatmap, self.thdata, self.img_data)
+        PhotoSnapshot(self.videostore.camera, self.heatmap, self.thdata, self.img_data, savedir = self.config["media"])
         
     def run(self):
         try:
@@ -688,7 +696,7 @@ class ThermalCamera:
             self._recording_stop()
 
     def _recording_start(self):
-        self.videoOut = VideoRecorder(self.videostore.camera, self.newWidth, self.newHeight)
+        self.videoOut = VideoRecorder(self.videostore.camera, self.newWidth, self.newHeight, savedir = self.config["media"])
         self.start = time.time()
 
     def _recording_stop(self):
@@ -765,9 +773,8 @@ def main():
     parser.add_argument('--camera', type=int, default=-1, help='Specify the camera (default: -1)')
     parser.add_argument('--media', type=str, help='Specify the path to the media folder')
 
-
     args = parser.parse_args()
-    
+        
     if args.update:
         VersionCheck().ensure_latest_version()
     else:
