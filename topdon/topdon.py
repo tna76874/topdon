@@ -345,7 +345,7 @@ class ThermalCamera:
         
         @app.route('/get_file_list', methods=['GET'])
         def get_file_list():
-            return jsonify([k.web_data() for k in self.files.get_files()])
+            return jsonify([k.web_data() for k in self.files.get_files_list()])
 
         @app.route('/download_file/<filename>', methods=['GET'])
         def download_file(filename):
@@ -358,14 +358,14 @@ class ThermalCamera:
 
         @app.route('/delete_file/<filename>', methods=['DELETE'])
         def delete_file(filename):
-            fileInfo = self.files.get_file(filename)
+            fileBundle = self.files.get_bundle(filename)
             
-            if fileInfo is None:
+            if fileBundle is None:
                 return jsonify({"error": "File not found"}), 404
 
             try:
-                fileInfo.delete()
-                return jsonify({"message": "File deleted successfully"}), 200
+                fileBundle.delete()
+                return jsonify({"message": "Files deleted successfully"}), 200
             except Exception as e:
                 return jsonify({"error": str(e)}), 500
         
@@ -702,6 +702,7 @@ class ThermalCamera:
     def _recording_stop(self):
         self.elapsed = "00:00:00"
         del self.videoOut
+        self.videoOut = None
                         
     def __del__(self):
         if hasattr(self, 'cap') and self.cap.isOpened():

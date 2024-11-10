@@ -129,12 +129,16 @@
             document.getElementById(tabId).classList.add('active');
 
             // Den aktiven Button hervorheben
-            const activeButton = Array.from(buttons).find(button => button.textContent.trim() === tabId.replace('Tab', ''));
+            const activeButton = Array.from(buttons).find(button => {
+                // Vergleiche den Textinhalt des Buttons mit dem Tab-Namen
+                return button.textContent.trim() === (tabId === 'videoTab' ? 'Video' : 'gespeicherte Dateien');
+            });
+
             if (activeButton) {
                 activeButton.classList.add('active');
             }
 
-            getFileList()
+            getFileList();
         }
 
         var socket = io.connect(window.location.protocol + '//'  + document.domain + ':' + location.port);
