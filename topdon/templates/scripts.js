@@ -130,6 +130,7 @@ function displayFileList(fileList) {
 
         const deleteButton = document.createElement('button');
         deleteButton.textContent = 'Löschen';
+        deleteButton.className = 'delete-button';
         deleteButton.onclick = function() {
             if (confirm(`Möchten Sie die Datei "${file.filename}" wirklich löschen?`)) {
                 deleteFile(file.filename);

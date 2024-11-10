@@ -5,6 +5,7 @@ body, html {
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    font-family: 'Helvetica', sans-serif;
 }
 .tab {
     display: none;
@@ -35,7 +36,7 @@ body, html {
     display: flex;
     justify-content: space-between;
     align-items: center; /* Zentriert die Elemente vertikal */
-    padding: 10px; /* Fügt etwas Innenabstand hinzu */
+    padding: 10px 20px; /* Fügt etwas Innenabstand hinzu */
     border: 1px solid #ccc; /* Fügt einen Rahmen hinzu */
     border-radius: 5px; /* Abgerundete Ecken */
     margin: 5px 0;
@@ -67,6 +68,17 @@ button:hover {
 
 button:focus {
     outline: none; /* Entfernt den Fokusrahmen */
+}
+
+.delete-button {
+    background-color: transparent; /* Standard Hintergrundfarbe */
+    color: black; /* Standard Textfarbe */
+    cursor: pointer; /* Zeiger-Cursor */
+}
+
+.delete-button:hover {
+    background-color: #dc3545; /* Hintergrundfarbe beim Hover */
+    color: white; /* Textfarbe beim Hover */
 }
 
 #toolbar {
