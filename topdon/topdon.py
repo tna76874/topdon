@@ -234,8 +234,7 @@ class ThermalCamera:
         self.hud_options = cycle(['cross','spots','none','all'])
         self.hud = next(self.hud_options)
         
-        self.recording_options = cycle([False,True])
-        self.recording = next(self.recording_options)
+        self.recording = False
         
         self.elapsed = "00:00:00"
         self.snaptime = "None"
@@ -559,6 +558,7 @@ class ThermalCamera:
                         self.videoOut.add_frame(heatmap, data = self.img_data)
                     except:
                         self.recording = False
+                        self._recording_stop()
                         
                         
                 if self.isqt:
@@ -688,7 +688,7 @@ class ThermalCamera:
         self.hud = next(self.hud_options)    
 
     def _toggle_recording(self):
-        self.recording = next(self.recording_options)
+        self.recording = not self.recording
 
         if self.recording == True:
             self._recording_start()
@@ -696,6 +696,7 @@ class ThermalCamera:
             self._recording_stop()
 
     def _recording_start(self):
+        self.recording = True
         self.videoOut = VideoRecorder(self.videostore.camera, self.newWidth, self.newHeight, savedir = self.config["media"])
         self.start = time.time()
 
@@ -703,6 +704,7 @@ class ThermalCamera:
         self.elapsed = "00:00:00"
         del self.videoOut
         self.videoOut = None
+        self.recording = False
                         
     def __del__(self):
         if hasattr(self, 'cap') and self.cap.isOpened():
