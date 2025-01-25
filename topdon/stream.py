@@ -10,6 +10,7 @@ import os
 from itertools import cycle
 
 from flask import Flask, Response
+from functools import wraps
 
 try:
     from topdon.video import *
@@ -212,11 +213,25 @@ class VideoStreamer:
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + cv2.imencode('.jpg', hm_frame)[1].tobytes() + b'\r\n')
 
+
+
+### FLASK APP
 app = Flask(__name__)
+
+
+def error_handling(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            return redirect(url_for('video_feed'))
+    return wrapper
 
 video_streamer=VideoStreamer()
 
 @app.route('/')
+@error_handling
 def video_feed():
     return Response(video_streamer._run(),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
