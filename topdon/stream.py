@@ -5,11 +5,11 @@ http stream
 """
 import cv2
 import numpy as np
-import yaml
 import os
 from itertools import cycle
 
 from flask import Flask, Response
+from flask_cors import CORS
 from functools import wraps
 
 try:
@@ -190,35 +190,30 @@ class VideoStreamer:
     def __init__(self,**kwargs):        
         self.videostore = Video()
         self.videostore.open(camera_id=kwargs.get('cam_id', -1))
-        self.cap = None
-
-    def _get_cap_size(self):
-        width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)/2)
-        return {'width': width, 'height': height}
-        
-    def _run(self):
         self.cap = self.videostore.cap
-  
+
+    def _run(self):
         while True:
-            ret, frame = self.cap.read()
-            if not ret:
-                break
-            TFrame = ThermalFrame(self.videostore.camera, frame)
-            hm = Heatmap(TFrame)
-            
-            hm_frame = hm.get_frame()
+            try:
+                ret, frame = self.cap.read()
+                if not ret:
+                    break
+                TFrame = ThermalFrame(self.videostore.camera, frame)
+                hm = Heatmap(TFrame)
+                
+                hm_frame = hm.get_frame()
 
-            # Erzeuge den MJPEG-Stream
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + cv2.imencode('.jpg', hm_frame)[1].tobytes() + b'\r\n')
-
-
+                # Erzeuge den MJPEG-Stream
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + cv2.imencode('.jpg', hm_frame)[1].tobytes() + b'\r\n')
+            except Exception as e:
+                continue
 
 ### FLASK APP
 
 def main():
     app = Flask(__name__)
+    CORS(app)
     
     
     def error_handling(func):
@@ -232,7 +227,7 @@ def main():
     
     video_streamer=VideoStreamer()
     
-    @app.route('/')
+    @app.route('/mjpeg')
     @error_handling
     def video_feed():
         return Response(video_streamer._run(),
