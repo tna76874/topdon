@@ -40,6 +40,7 @@ setup(
     entry_points={
         "console_scripts": [
             "topdon = topdon.topdon:main",
+            "topdon_stream = topdon.stream:main",
         ],
     },
     )

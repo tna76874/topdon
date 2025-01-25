@@ -216,28 +216,32 @@ class VideoStreamer:
 
 
 ### FLASK APP
-app = Flask(__name__)
 
-
-def error_handling(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except Exception as e:
-            return redirect(url_for('video_feed'))
-    return wrapper
-
-video_streamer=VideoStreamer()
-
-@app.route('/')
-@error_handling
-def video_feed():
-    return Response(video_streamer._run(),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
+def main():
+    app = Flask(__name__)
+    
+    
+    def error_handling(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                return redirect(url_for('video_feed'))
+        return wrapper
+    
+    video_streamer=VideoStreamer()
+    
+    @app.route('/')
+    @error_handling
+    def video_feed():
+        return Response(video_streamer._run(),
+                        mimetype='multipart/x-mixed-replace; boundary=frame')
+    
+    app.run(host='0.0.0.0', port=5000)
 
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000)
+    main()
     
 
