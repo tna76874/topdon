@@ -11,6 +11,8 @@ from itertools import cycle
 from flask import Flask, Response
 from flask_cors import CORS
 from functools import wraps
+import yaml
+import argparse
 
 try:
     from topdon.video import *
@@ -18,6 +20,24 @@ try:
 except:
     from video import *
     from topdon import ThermalFrame
+    
+class ConfigParser:
+    def __init__(self, config_file):
+        self.config_file = config_file
+        self.config_data = self.load_config()
+
+    def load_config(self):
+        if not os.path.exists(self.config_file):
+            return {}  
+
+        try:
+            with open(self.config_file, 'r') as file:
+                return yaml.safe_load(file) or {}
+        except Exception as e:
+            return {}
+
+    def get_config(self):
+        return self.config_data
 
 class Heatmap:
     def __init__(self, tframe, **kwargs):
@@ -89,6 +109,11 @@ class Heatmap:
         self.heatmap = None
         self.thdata = None
         self.temp_unit = kwargs.get("temp_unit", " C")
+    
+    def rotate(self, n=1):
+        for _ in range(n):
+            self.rotation = next(self.rotation_options)
+        self.tframe.rotate(self.rotation)
 
     def get_frame(self):
         """
@@ -168,9 +193,19 @@ class Heatmap:
             img_data (dict): Die Bilddaten des ThermalFrames.
             cmap_text (str): Der Name der aktuellen Farbkarte.
         """
-        # Schwarzer Hintergrund für den HUD
-        cv2.rectangle(heatmap, (0, 0), (160, 25), (0, 0, 0), -1)
-        cv2.putText(heatmap, f'avg. temp: {img_data["avg_temp"]}{self.temp_unit}', (10, 14),
+        # Erstellen Sie ein schwarzes Rechteck für den Text
+        cv2.rectangle(heatmap, (0, 0), (160, int(25 * 2.5)), (0, 0, 0), -1)
+        
+        # Durchschnittstemperatur
+        cv2.putText(heatmap, f'Avg Temp: {img_data["avg_temp"]}{self.temp_unit}', (10, 14),
+                    self.font, 0.4, (0, 255, 255), 1, cv2.LINE_AA)
+        
+        # Minimale Temperatur
+        cv2.putText(heatmap, f'Min Temp: {img_data["min_temp"]}{self.temp_unit}', (10, 28),
+                    self.font, 0.4, (0, 255, 255), 1, cv2.LINE_AA)
+        
+        # Maximale Temperatur
+        cv2.putText(heatmap, f'Max Temp: {img_data["max_temp"]}{self.temp_unit}', (10, 42),
                     self.font, 0.4, (0, 255, 255), 1, cv2.LINE_AA)
 
         if (self.hud!='none'):                      
@@ -191,6 +226,10 @@ class VideoStreamer:
         self.videostore = Video()
         self.videostore.open(camera_id=kwargs.get('cam_id', -1))
         self.cap = self.videostore.cap
+        
+        self.n_rotate = int(kwargs.get('n_rotate', 0))
+        self.temp_offset = kwargs.get('temp_offset', 0)
+        
 
     def _run(self):
         while True:
@@ -198,9 +237,8 @@ class VideoStreamer:
                 ret, frame = self.cap.read()
                 if not ret:
                     break
-                TFrame = ThermalFrame(self.videostore.camera, frame)
+                TFrame = ThermalFrame(self.videostore.camera, frame, offset = self.temp_offset)
                 hm = Heatmap(TFrame)
-                
                 hm_frame = hm.get_frame()
 
                 # Erzeuge den MJPEG-Stream
@@ -212,8 +250,16 @@ class VideoStreamer:
 ### FLASK APP
 
 def main():
+    parser = argparse.ArgumentParser(description='Flask Video Streamer')
+    parser.add_argument('--config', type=str, default='config.yml',
+                        help='Pfad zur Konfigurationsdatei (Standard: config.yml im aktuellen Verzeichnis)')
+    args = parser.parse_args()   
+
     app = Flask(__name__)
     CORS(app)
+    
+    
+    config_parser = ConfigParser(args.config)
     
     
     def error_handling(func):
@@ -225,7 +271,7 @@ def main():
                 return redirect(url_for('video_feed'))
         return wrapper
     
-    video_streamer=VideoStreamer()
+    video_streamer=VideoStreamer(**config_parser.get_config())
     
     @app.route('/mjpeg')
     @error_handling
@@ -237,6 +283,7 @@ def main():
 
 
 if __name__ == "__main__":
+    pass
     main()
     
 

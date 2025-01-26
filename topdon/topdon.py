@@ -49,11 +49,12 @@ template_folder = os.path.join(current_dir, 'templates')
 static_folder = os.path.join(current_dir, 'static')
 
 class ThermalFrame:
-    def __init__(self, camera, frame, rnd = 2):
+    def __init__(self, camera, frame, rnd=2, offset=0):
         self.imdata, self.thdata = np.array_split(frame, 2)
         self.rnd = rnd
-        self.camera=camera
+        self.camera = camera
         self.height, self.width, _ = self.imdata.shape
+        self.offset = offset
 
     def rotate(self, rotation):
         self.imdata = cv2.rotate(self.imdata, rotation)
@@ -75,7 +76,7 @@ class ThermalFrame:
         thdata[..., 0] contains a little temp offset
         ... /64 is equivalent to the bitshift operation >> 6. This way, the temperature is only encoded via integer numbers.
         """
-        return (thdata[..., 0] + thdata[..., 1] * 256) / 64
+        return (thdata[..., 0] + thdata[..., 1] * 256) / 64 + self.offset
 
     def _get_celsius_temperatures(self):
         return self._convert_raw_temp_data_to_kelvin_topdon(self.thdata) - 273.15
