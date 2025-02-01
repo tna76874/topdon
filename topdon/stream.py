@@ -64,7 +64,7 @@ class Heatmap:
         self.target_h = kwargs.get("target_h", int(self.height / 2))
 
         self.targetstep = kwargs.get("targetstep", 1)
-        self.scale = kwargs.get("scale", 3)  # Skalierungsfaktor
+        self.scale = kwargs.get("scale", 1)  # Skalierungsfaktor
         self.new_width = kwargs.get("new_width", self.width * self.scale)
         self.new_height = kwargs.get("new_height", self.height * self.scale)
         self.target = (int(self.new_width * self.target_w / self.width), int(self.new_height* self.target_h / self.height))
@@ -175,14 +175,17 @@ class Heatmap:
         """
         center = self.target
 
+        # Berechnung der Größe der Fadenkreuze und der Schriftgröße basierend auf dem Skalierungsfaktor
+        crosshair_length = 20 * self.scale  # Länge der Fadenkreuze anpassen
+        font_scale = 0.45 * self.scale  # Schriftgröße anpassen
+
         # Weiße Fadenkreuze
-        cv2.line(heatmap, (center[0], center[1] + 20), (center[0], center[1] - 20), (255, 255, 255), 2)
-        cv2.line(heatmap, (center[0] + 20, center[1]), (center[0] - 20, center[1]), (255, 255, 255), 2)
+        cv2.line(heatmap, (center[0], center[1] + crosshair_length), (center[0], center[1] - crosshair_length), (255, 255, 255), 2)
+        cv2.line(heatmap, (center[0] + crosshair_length, center[1]), (center[0] - crosshair_length, center[1]), (255, 255, 255), 2)
 
         # Temperatur anzeigen
-        cv2.putText(heatmap, str(img_data['target_temp']) + self.temp_unit, (center[0] + 10, center[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 2, cv2.LINE_AA)
-        cv2.putText(heatmap, str(img_data['target_temp']) + self.temp_unit, (center[0] + 10, center[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 255), 1, cv2.LINE_AA)
-
+        cv2.putText(heatmap, str(img_data['target_temp']) + self.temp_unit, (center[0] + 10, center[1] - 10), self.font, font_scale, (0, 0, 0), 2, cv2.LINE_AA)
+        cv2.putText(heatmap, str(img_data['target_temp']) + self.temp_unit, (center[0] + 10, center[1] - 10), self.font, font_scale, (0, 255, 255), 1, cv2.LINE_AA)
 
     def _draw_hud(self, heatmap, img_data, cmap_text):
         """
@@ -193,33 +196,42 @@ class Heatmap:
             img_data (dict): Die Bilddaten des ThermalFrames.
             cmap_text (str): Der Name der aktuellen Farbkarte.
         """
-        # Erstellen Sie ein schwarzes Rechteck für den Text
-        cv2.rectangle(heatmap, (0, 0), (160, int(25 * 2.5)), (0, 0, 0), -1)
-        
-        # Durchschnittstemperatur
-        cv2.putText(heatmap, f'Avg Temp: {img_data["avg_temp"]}{self.temp_unit}', (10, 14),
-                    self.font, 0.4, (0, 255, 255), 1, cv2.LINE_AA)
-        
-        # Minimale Temperatur
-        cv2.putText(heatmap, f'Min Temp: {img_data["min_temp"]}{self.temp_unit}', (10, 28),
-                    self.font, 0.4, (0, 255, 255), 1, cv2.LINE_AA)
-        
-        # Maximale Temperatur
-        cv2.putText(heatmap, f'Max Temp: {img_data["max_temp"]}{self.temp_unit}', (10, 42),
-                    self.font, 0.4, (0, 255, 255), 1, cv2.LINE_AA)
+        # Berechnung der Schriftgröße und der Rechteckgröße basierend auf dem Skalierungsfaktor
+        thisscale = self.scale/3
+        font_scale = 0.45 * thisscale  # Schriftgröße anpassen
+        rect_height = int(25 * thisscale*3*2)  # Höhe des Rechtecks anpassen
+        rect_spacing = int(10 * thisscale)
+        rect_width = int(160 * thisscale)  # Breite des Rechtecks anpassen
 
-        if (self.hud!='none'):                      
+
+        # Erstellen Sie ein schwarzes Rechteck für den Text
+        cv2.rectangle(heatmap, (0, 0), (rect_width, rect_height), (0, 0, 0), -1)
+
+        # Durchschnittstemperatur
+        cv2.putText(heatmap, f'Avg Temp: {img_data["avg_temp"]}{self.temp_unit}', (rect_spacing, int(14 * self.scale)),
+                    self.font, font_scale, (0, 255, 255), 1, cv2.LINE_AA)
+
+        # Minimale Temperatur
+        cv2.putText(heatmap, f'Min Temp: {img_data["min_temp"]}{self.temp_unit}', (rect_spacing, int(28 * self.scale)),
+                    self.font, font_scale, (0, 255, 255), 1, cv2.LINE_AA)
+
+        # Maximale Temperatur
+        cv2.putText(heatmap, f'Max Temp: {img_data["max_temp"]}{self.temp_unit}', (rect_spacing, int(42 * self.scale)),
+                    self.font, font_scale, (0, 255, 255), 1, cv2.LINE_AA)
+
+        if (self.hud != 'none'):
             if img_data['max_temp'] > img_data['avg_temp'] + self.threshold:
                 self._draw_circle_text(heatmap, img_data['max_temp_y'], img_data['max_temp_x'], img_data['max_temp'], (0, 0, 255))
-            
+
             if img_data['min_temp'] < img_data['avg_temp'] - self.threshold:
                 self._draw_circle_text(heatmap, img_data['min_temp_y'], img_data['min_temp_x'], img_data['min_temp'], (255, 0, 0))
 
     def _draw_circle_text(self, heatmap, row, col, temp, color):
-        cv2.circle(heatmap, (row, col), 5, (0, 0, 0), 2)
-        cv2.circle(heatmap, (row, col), 5, color, -1)
+        circle_radius = 5 * self.scale  # Radius des Kreises anpassen
+        cv2.circle(heatmap, (row, col), int(circle_radius), (0, 0, 0), 2)
+        cv2.circle(heatmap, (row, col), int(circle_radius), color, -1)
         cv2.putText(heatmap, str(temp) + self.temp_unit, (row + 10, col + 5),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 255), 1, cv2.LINE_AA)
+                    self.font, 0.45 * self.scale, (0, 255, 255), 1, cv2.LINE_AA)
     
 class VideoStreamer:
     def __init__(self,**kwargs):        
