@@ -10,6 +10,7 @@ from itertools import cycle
 
 from flask import Flask, Response
 from flask_cors import CORS
+from flask_restful import Api, Resource, reqparse
 from functools import wraps
 import yaml
 import argparse
@@ -109,6 +110,8 @@ class Heatmap:
         self.heatmap = None
         self.thdata = None
         self.temp_unit = kwargs.get("temp_unit", " C")
+
+        self.img_data = None
     
     def rotate(self, n=1):
         for _ in range(n):
@@ -133,6 +136,7 @@ class Heatmap:
         self.tframe._set_target(self.target_h, self.target_w)
 
         img_data = self.tframe._get_data(self.new_width)
+        self.img_data = img_data
         bgr = cv2.cvtColor(self.tframe.imdata, cv2.COLOR_YUV2BGR_YUYV)
 
         # Kontrast anwenden
@@ -241,6 +245,8 @@ class VideoStreamer:
         
         self.n_rotate = int(kwargs.get('n_rotate', 0))
         self.temp_offset = kwargs.get('temp_offset', 0)
+
+        self.img_data = None
         
 
     def _run(self):
@@ -252,6 +258,7 @@ class VideoStreamer:
                 TFrame = ThermalFrame(self.videostore.camera, frame, offset = self.temp_offset)
                 hm = Heatmap(TFrame)
                 hm_frame = hm.get_frame()
+                self.img_data = hm.img_data
 
                 # Erzeuge den MJPEG-Stream
                 yield (b'--frame\r\n'
@@ -265,15 +272,13 @@ def main():
     parser = argparse.ArgumentParser(description='Flask Video Streamer')
     parser.add_argument('--config', type=str, default='config.yml',
                         help='Pfad zur Konfigurationsdatei (Standard: config.yml im aktuellen Verzeichnis)')
-    args = parser.parse_args()   
+    args = parser.parse_args()
 
     app = Flask(__name__)
     CORS(app)
-    
-    
+    api = Api(app)
     config_parser = ConfigParser(args.config)
-    
-    
+
     def error_handling(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -284,7 +289,36 @@ def main():
         return wrapper
     
     video_streamer=VideoStreamer(**config_parser.get_config())
+
+    class SetTemperature(Resource):
+        def post(self):
+            parser = reqparse.RequestParser()
+            parser.add_argument('destination', type=str, required=True, choices=('min', 'max', 'average'),
+                                help='Destination must be "min", "max", or "average"')
+            parser.add_argument('temperature', type=float, required=True,
+                                help='Temperature must be a float')
+            args = parser.parse_args()
+
+            destination = args['destination']
+            temperature = args['temperature']
+            
+            if video_streamer.img_data==None:
+                return {'message': video_streamer.img_data}, 400
+
+            if destination == 'min':
+                video_streamer.temp_offset = temperature - video_streamer.img_data['min_temp']
+                
+            elif destination == 'max':
+                video_streamer.temp_offset = temperature - video_streamer.img_data['max_temp']
+                
+            elif destination == 'average':
+                video_streamer.temp_offset = temperature - video_streamer.img_data['avg_temp']
+                
+            return {'message': f'Temperature for {destination} set to {temperature}'}, 200
+
+    api.add_resource(SetTemperature, '/api/set_temperature')
     
+    @app.route('/')
     @app.route('/mjpeg')
     @error_handling
     def video_feed():
