@@ -306,13 +306,13 @@ def main():
                 return {'message': video_streamer.img_data}, 400
 
             if destination == 'min':
-                video_streamer.temp_offset = temperature - video_streamer.img_data['min_temp']
+                video_streamer.temp_offset += temperature - video_streamer.img_data['min_temp']
                 
             elif destination == 'max':
-                video_streamer.temp_offset = temperature - video_streamer.img_data['max_temp']
+                video_streamer.temp_offset += temperature - video_streamer.img_data['max_temp']
                 
             elif destination == 'average':
-                video_streamer.temp_offset = temperature - video_streamer.img_data['avg_temp']
+                video_streamer.temp_offset += temperature - video_streamer.img_data['avg_temp']
                 
             return {'message': f'Temperature for {destination} set to {temperature}'}, 200
 
