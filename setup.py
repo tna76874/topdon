@@ -26,7 +26,7 @@ setup(
         "openpyxl",
         "PyYAML",
         "flask_cors",
-        "flask-restful"
+        "flask-restful",
         "quickflare @ git+https://github.com/tna76874/quickflare.git@ed55c9ec8d45b8e813777e16446e4eb1d97cba8d",
     ],
     package_data={
